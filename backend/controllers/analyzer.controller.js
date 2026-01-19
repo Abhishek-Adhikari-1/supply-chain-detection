@@ -9,12 +9,29 @@ import { io } from "../socket/socket.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Use venv Python if available, otherwise system python3
-const PYTHON_CMD = fs.existsSync(
-  path.join(__dirname, "../../.venv/bin/python3"),
-)
-  ? path.join(__dirname, "../../.venv/bin/python3")
-  : "python3";
+// Use environment variable for Python path, or fallback to venv/system python3
+const PYTHON_CMD = process.env.PYTHON_PATH ||
+  (fs.existsSync(path.join(__dirname, "../../.venv/bin/python3"))
+    ? path.join(__dirname, "../../.venv/bin/python3")
+    : "python3");
+
+// Helper function to validate and sanitize paths
+function validateProjectPath(inputPath, projectRoot) {
+  // Normalize the path to remove .. and .
+  const resolvedPath = path.isAbsolute(inputPath)
+    ? path.normalize(inputPath)
+    : path.normalize(path.join(projectRoot, inputPath));
+  
+  // Ensure the resolved path is within the project root or is an absolute safe path
+  const isWithinRoot = resolvedPath.startsWith(path.normalize(projectRoot));
+  const isValidAbsolute = path.isAbsolute(inputPath) && fs.existsSync(resolvedPath);
+  
+  if (!isWithinRoot && !isValidAbsolute) {
+    throw new Error('Invalid path: Path traversal detected');
+  }
+  
+  return resolvedPath;
+}
 
 export const analyzeProject = async (req, res) => {
   try {
@@ -29,20 +46,28 @@ export const analyzeProject = async (req, res) => {
 
     const scriptPath = path.join(__dirname, "../../scanner_predictor.py");
     
-    // Resolve path relative to project root (not backend directory)
+    // Resolve and validate path to prevent directory traversal attacks
     const projectRoot = path.join(__dirname, "../..");
-    const resolvedProjectPath = path.isAbsolute(projectPath)
-      ? projectPath
-      : path.join(projectRoot, projectPath);
+    const resolvedProjectPath = validateProjectPath(projectPath, projectRoot);
 
     const pythonProcess = spawn(PYTHON_CMD, [scriptPath, resolvedProjectPath]);
 
-    io.emit("analysis:start", {
-      analysisId,
-      userId,
-      projectPath: resolvedProjectPath,
-      source: "project",
-    });
+    // Emit to user-specific room if userId exists, otherwise broadcast
+    if (userId) {
+      io.to(`user:${userId}`).emit("analysis:start", {
+        analysisId,
+        userId,
+        projectPath: resolvedProjectPath,
+        source: "project",
+      });
+    } else {
+      io.emit("analysis:start", {
+        analysisId,
+        userId,
+        projectPath: resolvedProjectPath,
+        source: "project",
+      });
+    }
 
     let stdout = "";
     let stderr = "";
@@ -93,7 +118,11 @@ export const analyzeProject = async (req, res) => {
 
     pythonProcess.on("error", (error) => {
       console.error("Failed to start Python process:", error);
-      io.emit("analysis:error", { analysisId, userId, error: error.message });
+      if (userId) {
+        io.to(`user:${userId}`).emit("analysis:error", { analysisId, userId, error: error.message });
+      } else {
+        io.emit("analysis:error", { analysisId, userId, error: error.message });
+      }
       res.status(500).json({
         error: "Failed to start analysis",
         details: error.message,
@@ -146,12 +175,22 @@ export const analyzeUploadedFile = async (req, res) => {
     const scriptPath = path.join(__dirname, "../../scanner_predictor.py");
     const pythonProcess = spawn(PYTHON_CMD, [scriptPath, tempProjectDir]);
 
-    io.emit("analysis:start", {
-      analysisId,
-      userId,
-      projectPath: tempProjectDir,
-      source: "upload",
-    });
+    // Emit to user-specific room if userId exists, otherwise broadcast
+    if (userId) {
+      io.to(`user:${userId}`).emit("analysis:start", {
+        analysisId,
+        userId,
+        projectPath: tempProjectDir,
+        source: "upload",
+      });
+    } else {
+      io.emit("analysis:start", {
+        analysisId,
+        userId,
+        projectPath: tempProjectDir,
+        source: "upload",
+      });
+    }
 
     let stdout = "";
     let stderr = "";
@@ -216,7 +255,11 @@ export const analyzeUploadedFile = async (req, res) => {
       }
 
       console.error("Failed to start Python process:", error);
-      io.emit("analysis:error", { analysisId, userId, error: error.message });
+      if (userId) {
+        io.to(`user:${userId}`).emit("analysis:error", { analysisId, userId, error: error.message });
+      } else {
+        io.emit("analysis:error", { analysisId, userId, error: error.message });
+      }
       res.status(500).json({
         error: "Failed to start analysis",
         details: error.message,

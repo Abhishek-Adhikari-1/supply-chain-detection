@@ -33,6 +33,10 @@ export function useRealtimeAnalysis() {
     };
 
     socket.on("connect", () => {
+      // Join user-specific room for private events
+      if (user?._id) {
+        socket.emit("join:user", user._id);
+      }
       addLog({ message: "Connected to live analysis", stream: "system" });
     });
 
@@ -74,6 +78,10 @@ export function useRealtimeAnalysis() {
     });
 
     return () => {
+      // Leave user room before disconnecting
+      if (user?._id) {
+        socket.emit("leave:user", user._id);
+      }
       socket.disconnect();
     };
   }, [addLog, setResults, setStatus, startAnalysis, user]);
