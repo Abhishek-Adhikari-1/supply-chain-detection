@@ -9,17 +9,19 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-// import { Separator } from "@/components/ui/separator";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signupSchema, type SignupFormData } from "@/schemas/auth.schema";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { authApi } from "@/services/auth.api";
+import { toast } from "sonner";
 
 export function SignupForm({
     className,
     ...props
 }: React.ComponentProps<"form">) {
+    const navigate = useNavigate();
     const form = useForm<SignupFormData>({
         resolver: zodResolver(signupSchema),
         defaultValues: {
@@ -30,9 +32,20 @@ export function SignupForm({
         },
     });
 
-    const onSubmit = (data: SignupFormData) => {
-        console.log("Signup data:", data);
-        // TODO: Implement signup API call
+    const onSubmit = async (data: SignupFormData) => {
+        try {
+            await authApi.signup({
+                name: data.name,
+                email: data.email,
+                password: data.password,
+            });
+            toast.success("Account created successfully!");
+            navigate("/login");
+        } catch (error) {
+            toast.error(
+                error instanceof Error ? error.message : "Failed to sign up",
+            );
+        }
     };
 
     return (
@@ -163,4 +176,3 @@ export function SignupForm({
         </Form>
     );
 }
-

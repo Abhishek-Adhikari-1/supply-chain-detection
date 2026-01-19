@@ -11,13 +11,16 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, type LoginFormData } from "@/schemas/auth.schema";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { authApi } from "@/services/auth.api";
+import { toast } from "sonner";
 
 export function LoginForm({
     className,
     ...props
 }: React.ComponentProps<"form">) {
+    const navigate = useNavigate();
     const form = useForm<LoginFormData>({
         resolver: zodResolver(loginSchema),
         defaultValues: {
@@ -26,9 +29,16 @@ export function LoginForm({
         },
     });
 
-    const onSubmit = (data: LoginFormData) => {
-        console.log("Login data:", data);
-        // TODO: Implement login API call
+    const onSubmit = async (data: LoginFormData) => {
+        try {
+            const user = await authApi.signin(data);
+            toast.success(`Welcome back, ${user.name}!`);
+            navigate("/"); // Navigate to dashboard or home after login
+        } catch (error) {
+            toast.error(
+                error instanceof Error ? error.message : "Failed to sign in",
+            );
+        }
     };
 
     return (
