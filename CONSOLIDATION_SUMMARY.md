@@ -3,11 +3,13 @@
 ## ✅ What Was Done
 
 ### 1. **Unified Scanner Architecture**
+
 - ✅ Created `unified_scanner.py` - handles all input formats
 - ✅ Updated `scanner_predictor.py` - now wraps unified_scanner
 - ✅ Both maintain backward compatibility with backend API
 
 ### 2. **Package Format Support**
+
 - ✅ **Directories** (unpacked packages)
 - ✅ **.tar.gz archives** (npm tarball format)
 - ✅ **.tgz archives** (compressed tarball)
@@ -15,11 +17,14 @@
 - ✅ **Projects** (with package.json or requirements.txt)
 
 ### 3. **File Consolidation**
+
 **Removed from root** (were redundant):
+
 - ❌ `malicious_package_detector.pkl` (old model)
 - ❌ `malicious_packages_dataset.csv` (old dataset)
 
 **Current state**:
+
 - ✅ `security_model.pkl` (main directory - 514KB)
 - ✅ `security_packages_dataset.csv` (main directory - 92KB)
 - ✅ `RandomForest/security_model.pkl` (backup copy)
@@ -28,6 +33,7 @@
 ### 4. **Features Added**
 
 #### Package Extraction
+
 ```python
 # Handle .tar.gz
 extract_tar_gz(Path) → Path
@@ -40,6 +46,7 @@ extract_packed_package(str) → Tuple[Path, bool]
 ```
 
 #### Pattern Scanning
+
 - Base64 strings detection
 - Eval/exec usage tracking
 - Network calls & suspicious URLs
@@ -49,6 +56,7 @@ extract_packed_package(str) → Tuple[Path, bool]
 - Backdoor pattern detection
 
 #### Model Integration
+
 - Auto-detects model location
 - Handles both `feature_cols` and `feature_columns` keys
 - Graceful fallback for missing fields
@@ -56,7 +64,7 @@ extract_packed_package(str) → Tuple[Path, bool]
 ## 📊 Accuracy
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Accuracy | 92% |
 | Precision | 89% |
 | Recall | 91% |
@@ -83,8 +91,8 @@ python3 scanner_predictor.py ./my-node-project
 
 ## 📂 Directory Structure
 
-```
-Hackathon/
+```text
+Supply_Chain_Guardian/
 ├── unified_scanner.py          ← New: Full-featured scanner
 ├── scanner_predictor.py        ← Updated: Now uses unified_scanner
 ├── security_model.pkl          ← Current model
@@ -109,7 +117,7 @@ Hackathon/
 
 ## 🔄 Data Flow
 
-```
+```text
 User Input (project/package)
     ↓
 extract_packed_package() [if needed]
