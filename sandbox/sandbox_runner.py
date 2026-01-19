@@ -35,7 +35,9 @@ class SandboxRunner:
         self.results_dir.mkdir(exist_ok=True)
         self.logs_dir.mkdir(exist_ok=True)
         
-        self.execution_id = f"{self.package_path.name}_{int(time.time())}"
+        # Use environment variable for package name if available, otherwise use directory name
+        package_name = os.environ.get('PACKAGE_NAME', self.package_path.name)
+        self.execution_id = f"{package_name}_{int(time.time())}"
         
     def setup_monitoring(self):
         """Start network and file monitoring in background"""
@@ -61,13 +63,23 @@ class SandboxRunner:
         return monitors
     
     def stop_monitoring(self, monitors):
-        """Stop all monitoring processes"""
+        """Stop all monitoring processes and ensure logs are saved"""
         for name, proc in monitors.items():
             try:
                 proc.terminate()
-                proc.wait(timeout=5)
-            except:
+                # Wait longer for monitors to save their logs
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
                 proc.kill()
+                proc.wait()
+            except:
+                try:
+                    proc.kill()
+                except:
+                    pass
+        
+        # Give monitors time to write logs
+        time.sleep(2)
     
     def run_npm_package(self):
         """Execute npm package"""
@@ -210,7 +222,17 @@ class SandboxRunner:
         with open(result_file, 'w') as f:
             json.dump(result, f, indent=2)
         
+        # Save execution logs (stdout/stderr)
+        log_file = self.logs_dir / f'{self.execution_id}_execution.json'
+        with open(log_file, 'w') as f:
+            json.dump({
+                'execution_id': self.execution_id,
+                'execution': execution_result,
+                'timestamp': datetime.fromtimestamp(end_time).isoformat()
+            }, f, indent=2)
+        
         print(f"[Sandbox] Execution complete: {result_file}")
+        print(f"[Sandbox] Logs saved: {log_file}")
         return result
 
 

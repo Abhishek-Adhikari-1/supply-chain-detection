@@ -73,6 +73,7 @@ docker run \
     --cap-drop=ALL \
     --cap-add=NET_ADMIN \
     --security-opt=no-new-privileges \
+    -e "PACKAGE_NAME=$PACKAGE_NAME" \
     -v "$(cd .. && pwd)/$PACKAGE_PATH:/sandbox/package:ro" \
     -v "$RESULTS_DIR:/sandbox/results:rw" \
     -v "$LOGS_DIR:/sandbox/logs:rw" \
