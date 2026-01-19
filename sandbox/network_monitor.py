@@ -178,6 +178,16 @@ def main():
     duration = int(sys.argv[2]) if len(sys.argv) > 2 else 60
     
     monitor = NetworkMonitor(execution_id)
+    
+    # Handle termination signals
+    def signal_handler(signum, frame):
+        monitor.stop()
+        sys.exit(0)
+
+    import signal
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+
     monitor.start()
     
     # Monitor for specified duration

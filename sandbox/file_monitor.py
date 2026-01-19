@@ -216,6 +216,16 @@ def main():
     duration = int(sys.argv[3]) if len(sys.argv) > 3 else 60
     
     monitor = FileMonitor(execution_id, watch_path)
+    
+    # Handle termination signals
+    def signal_handler(signum, frame):
+        monitor.stop()
+        sys.exit(0)
+
+    import signal
+    signal.signal(signal.SIGTERM, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
+
     monitor.start()
     
     # Monitor for specified duration
