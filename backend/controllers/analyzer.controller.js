@@ -7,6 +7,13 @@ import os from "os";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Use venv Python if available, otherwise system python3
+const PYTHON_CMD = fs.existsSync(
+  path.join(__dirname, "../../.venv/bin/python3"),
+)
+  ? path.join(__dirname, "../../.venv/bin/python3")
+  : "python3";
+
 export const analyzeProject = async (req, res) => {
   try {
     const { projectPath } = req.body;
@@ -18,7 +25,7 @@ export const analyzeProject = async (req, res) => {
     const scriptPath = path.join(__dirname, "../../scanner_predictor.py");
     const resolvedProjectPath = path.resolve(projectPath);
 
-    const pythonProcess = spawn("python3", [scriptPath, resolvedProjectPath]);
+    const pythonProcess = spawn(PYTHON_CMD, [scriptPath, resolvedProjectPath]);
 
     let stdout = "";
     let stderr = "";
@@ -98,7 +105,7 @@ export const analyzeUploadedFile = async (req, res) => {
     }
 
     const scriptPath = path.join(__dirname, "../../scanner_predictor.py");
-    const pythonProcess = spawn("python3", [scriptPath, tempProjectDir]);
+    const pythonProcess = spawn(PYTHON_CMD, [scriptPath, tempProjectDir]);
 
     let stdout = "";
     let stderr = "";

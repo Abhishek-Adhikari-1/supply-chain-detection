@@ -2,13 +2,17 @@ import re
 import json
 import pickle
 import hashlib
+import os
 from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
 
-MODEL_PATH = "malicious_package_detector.pkl"
+# Resolve paths relative to this script's directory
+SCRIPT_DIR = Path(__file__).parent.resolve()
+MODEL_PATH = SCRIPT_DIR / "malicious_package_detector.pkl"
+FEATURE_COLS_PATH = SCRIPT_DIR / "feature_cols.json"
 
 # ---------------- Patterns ----------------
 URL_RE = re.compile(r"https?://[^\s'\"<>]+", re.IGNORECASE)
