@@ -14,13 +14,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { signupSchema, type SignupFormData } from "@/schemas/auth.schema";
 import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+<<<<<<< HEAD
 import { useAuthStore } from "@/store/useAuthStore";
 import { useEffect } from "react";
+=======
+import { authApi } from "@/services/auth.api";
+import { toast } from "sonner";
+>>>>>>> 430e870b082075de86bc9192af71ee32305594d5
 
 export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
+<<<<<<< HEAD
   const navigate = useNavigate();
   const { signup, error, clearError } = useAuthStore();
 
@@ -33,6 +39,34 @@ export function SignupForm({
       confirmPassword: "",
     },
   });
+=======
+    const navigate = useNavigate();
+    const form = useForm<SignupFormData>({
+        resolver: zodResolver(signupSchema),
+        defaultValues: {
+            name: "",
+            email: "",
+            password: "",
+            confirmPassword: "",
+        },
+    });
+
+    const onSubmit = async (data: SignupFormData) => {
+        try {
+            await authApi.signup({
+                name: data.name,
+                email: data.email,
+                password: data.password,
+            });
+            toast.success("Account created successfully!");
+            navigate("/login");
+        } catch (error) {
+            toast.error(
+                error instanceof Error ? error.message : "Failed to sign up",
+            );
+        }
+    };
+>>>>>>> 430e870b082075de86bc9192af71ee32305594d5
 
   useEffect(() => {
     clearError();
