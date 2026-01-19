@@ -34,8 +34,6 @@ __pycache__/
 *.pkl
 *.joblib
 malicious_package_detector.pkl
-data/security_model.pkl
-data/feature_cols.json
 
 # Sandbox
 sandbox/.pkg_snapshots/
