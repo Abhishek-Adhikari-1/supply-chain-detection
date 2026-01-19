@@ -16,7 +16,22 @@ warnings.filterwarnings('ignore')
 
 # Resolve paths relative to this script's directory
 SCRIPT_DIR = Path(__file__).parent.resolve()
-MODEL_PATH = SCRIPT_DIR / "data" / "security_model.pkl"  # Updated to new model
+# Try multiple locations for the model file
+MODEL_PATHS = [
+    SCRIPT_DIR / "data" / "security_model.pkl",
+    SCRIPT_DIR / "RandomForest" / "security_model.pkl",
+    Path("data") / "security_model.pkl",
+    Path("RandomForest") / "security_model.pkl",
+]
+MODEL_PATH = None
+for path in MODEL_PATHS:
+    if path.exists():
+        MODEL_PATH = path
+        break
+if MODEL_PATH is None:
+    # Default to data directory for training
+    MODEL_PATH = SCRIPT_DIR / "data" / "security_model.pkl"
+
 FEATURE_COLS_PATH = SCRIPT_DIR / "data" / "feature_cols.json"
 
 # ---------------- Patterns ----------------
@@ -481,6 +496,15 @@ def scan_project_source_for_risks(project_dir: Path) -> Dict[str, float]:
 
 # ---------------- prediction ----------------
 def load_model():
+    # Check if model exists, if not provide a helpful error
+    if not Path(MODEL_PATH).exists():
+        error_msg = f"Model file not found at: {MODEL_PATH}\n"
+        error_msg += "Searched locations:\n"
+        for path in MODEL_PATHS:
+            error_msg += f"  - {path} {'(exists)' if path.exists() else '(not found)'}\n"
+        error_msg += "\nPlease run train_model.py to generate the model or copy it to data/ or RandomForest/ directory."
+        raise FileNotFoundError(error_msg)
+    
     with open(MODEL_PATH, "rb") as f:
         return pickle.load(f)
 
@@ -518,7 +542,7 @@ def explain_row_binary_first(row_dict: Dict, explanations: Dict[str, str], top_k
             break
     return reasons[:top_k]
 
-def predict_rows(rows: List[Dict], threshold_safe=0.35, threshold_mal=0.65) -> List[Dict]:
+def predict_rows(rows: List[Dict], threshold_safe=0.25, threshold_mal=0.50) -> List[Dict]:
     art = load_model()
     model = art["model"]
     scaler = art["scaler"]

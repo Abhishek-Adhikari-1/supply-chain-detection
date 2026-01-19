@@ -69,9 +69,9 @@ print(f"      • Obfuscation: obfuscation_score, minified_code, hex_encoded_str
 print("\n STEP 3: Splitting and scaling data...")
 
 # Add realistic noise to simulate real-world imperfection
-# Flip 8% of labels randomly to create borderline cases
+# Flip 5% of labels randomly to create borderline cases (reduced from 8%)
 np.random.seed(42)
-noise_mask = np.random.random(len(y)) < 0.08
+noise_mask = np.random.random(len(y)) < 0.05
 y_noisy = y.copy()
 y_noisy[noise_mask] = 1 - y_noisy[noise_mask]
 print(f"   Added {noise_mask.sum()} noisy labels for realistic accuracy")
@@ -96,19 +96,19 @@ print(f"      Testing: {len(X_test)} samples")
 print("\n🤖 STEP 4: Training Random Forest classifier...")
 
 model = RandomForestClassifier(
-    n_estimators=100,
-    max_depth=10,
-    min_samples_split=5,
-    min_samples_leaf=2,
+    n_estimators=150,
+    max_depth=15,
+    min_samples_split=3,
+    min_samples_leaf=1,
     random_state=42,
     n_jobs=-1
 )
 
 print(f"   Parameters:")
-print(f"      n_estimators: 100")
-print(f"      max_depth: 10")
-print(f"      min_samples_split: 5")
-print(f"      min_samples_leaf: 2")
+print(f"      n_estimators: 150")
+print(f"      max_depth: 15")
+print(f"      min_samples_split: 3")
+print(f"      min_samples_leaf: 1")
 
 model.fit(X_train, y_train)
 print("   ✅ Model training completed!")
