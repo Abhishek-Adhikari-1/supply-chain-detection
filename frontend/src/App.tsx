@@ -61,20 +61,12 @@ function AppContent() {
 }
 
 function App() {
-    return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/" element={<Navigate to="/login" replace />} />
-                <Route path="/signup" element={<SignupPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route
-                    path="/forgot-password"
-                    element={<ForgotPasswordPage />}
-                />
-            </Routes>
-            <Toaster richColors position="top-right" />
-        </BrowserRouter>
-    );
+  return (
+    <BrowserRouter>
+      <AppContent />
+      <Toaster richColors position="top-right" />
+    </BrowserRouter>
+  );
 }
 
 export default App;
