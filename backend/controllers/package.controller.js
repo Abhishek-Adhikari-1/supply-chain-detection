@@ -7,25 +7,60 @@ const PYTHON_AI_SERVER_URL =
 // Helper to parse package files
 const parsePackageFile = (content, fileName) => {
   const packages = [];
+  let metadata = {};
 
   if (fileName.endsWith("package.json")) {
     try {
       const json = JSON.parse(content);
-      const deps = { ...json.dependencies, ...json.devDependencies };
+      // Store metadata about the project
+      metadata = {
+        projectName: json.name || "unknown",
+        projectVersion: json.version || "0.0.0",
+        hasScripts: !!json.scripts,
+        hasDevDeps: !!json.devDependencies,
+        totalDeps: Object.keys(json.dependencies || {}).length,
+        totalDevDeps: Object.keys(json.devDependencies || {}).length,
+      };
+
+      // Parse each dependency separately with context
+      const deps = json.dependencies || {};
+      const devDeps = json.devDependencies || {};
+
       for (const [name, version] of Object.entries(deps)) {
-        packages.push({ name, version: version.replace(/[\^~]/g, "") });
+        packages.push({
+          name,
+          version: version.replace(/[\^~]/g, ""),
+          isDev: false,
+          ecosystem: "npm",
+          projectContext: metadata,
+        });
+      }
+
+      for (const [name, version] of Object.entries(devDeps)) {
+        packages.push({
+          name,
+          version: version.replace(/[\^~]/g, ""),
+          isDev: true,
+          ecosystem: "npm",
+          projectContext: metadata,
+        });
       }
     } catch {
       throw new Error("Invalid package.json format");
     }
   } else if (fileName.endsWith("requirements.txt")) {
-    const lines = content.split("\n");
-    for (const line of lines) {
+    for (const line of content.split("\n")) {
       const trimmed = line.trim();
       if (trimmed && !trimmed.startsWith("#")) {
         const match = trimmed.match(/^([a-zA-Z0-9_-]+)(?:==|>=|<=|>|<)?(.+)?$/);
         if (match) {
-          packages.push({ name: match[1], version: match[2] || "latest" });
+          packages.push({
+            name: match[1],
+            version: match[2] || "latest",
+            isDev: false,
+            ecosystem: "pypi",
+            projectContext: {},
+          });
         }
       }
     }
@@ -47,25 +82,25 @@ const getRiskLevel = (score) => {
 };
 
 // Scan packages using Python AI server (with fallback mock)
-const scanPackagesWithAI = async (packages, originalContent = null) => {
+const scanPackagesWithAI = async (packages) => {
   try {
-    console.log("Sending to Python AI server:", packages);
+    console.log(`Sending ${packages.length} packages to Python AI server`);
     const response = await axios.post(
       `${PYTHON_AI_SERVER_URL}/analyze`,
       {
-        formatted: packages,
-        original: originalContent,
+        packages: packages,
       },
       { timeout: 30000 },
     );
     return response.data.results;
   } catch (error) {
     console.log("Python AI server not available, using mock results");
+    console.log("Error details:", error.message);
     // Mock response for demo when AI server is not running
     return packages.map((pkg) => ({
       package: pkg.name,
       version: pkg.version,
-      riskScore: Math.floor(Math.random() * 30), // Low risk for demo
+      riskScore: Math.floor(Math.random() * 50), // Random 0-50 for demo variety
       riskLevel: "low",
       issues: [],
     }));
@@ -92,19 +127,8 @@ export const scanFile = async (req, res) => {
       return res.status(400).json({ error: "No packages found in file" });
     }
 
-    // Parse original content for package.json files
-    let originalContent = null;
-    if (fileName.endsWith("package.json")) {
-      try {
-        originalContent = JSON.parse(content);
-      } catch {
-        originalContent = content;
-      }
-    } else {
-      originalContent = content;
-    }
-
-    const results = await scanPackagesWithAI(packages, originalContent);
+    // Analyze packages (now contains metadata about each package)
+    const results = await scanPackagesWithAI(packages);
 
     // Save scan to database
     const scan = new Scan({
