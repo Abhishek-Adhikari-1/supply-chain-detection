@@ -252,7 +252,7 @@ export default function HistoryPage() {
                 className="hover:bg-primary/10 transition-all duration-300"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Dashboard
+                Back
               </Button>
             </Link>
             <div className="flex items-center gap-3">
