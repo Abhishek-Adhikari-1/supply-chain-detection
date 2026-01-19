@@ -16,6 +16,9 @@ Packages
 - crypto-miner (Node):
   - Signals: CPU spin, obfuscated base64 string, suspicious dep `xmrig-native`.
   - Files: sus_packages/crypto-miner/index.js, package.json.
+- expresss (Node, typosquat):
+  - Signals: postinstall hook, env access, base64 + eval, https POST to `203.0.113.10`, temp file write.
+  - Files: sus_packages/expresss/package.json, postinstall.js, index.js.
 - py_backdoor (Python):
   - Signals: env access, `~/.ssh/id_rsa` read (first bytes), socket connect to `45.142.212.61:443`, base64+exec.
   - Files: sus_packages/py_backdoor/backdoor.py, **init**.py.
@@ -37,6 +40,7 @@ Optional Runtime Demos (guarded)
   # Gated run
   RUN_DEMO=1 node sus_packages/auth-helper/index.js
   RUN_DEMO=1 node sus_packages/crypto-miner/index.js
+  RUN_DEMO=1 npm install ./sus_packages/expresss && RUN_DEMO=1 node -e "require('./sus_packages/expresss').noop()"
   ```
 
 - Python (only if needed):
@@ -44,6 +48,7 @@ Optional Runtime Demos (guarded)
   ```bash
   python -c "import sus_packages.py_backdoor as p; print('loaded')"
   RUN_DEMO=1 python -c "import sus_packages.py_backdoor as p; p.exfiltrate()"
+  RUN_DEMO=1 python -c "import sus_packages.py_backdoor.run_backdoor as r; r.run_backdoor_main()"
   ```
 
 Integration With Pipeline

