@@ -6,6 +6,7 @@ import LoginPage from "@/pages/LoginPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import DashboardPage from "@/pages/DashboardPage";
 import ThreatDetailPage from "@/pages/ThreatDetailPage";
+import LandingPage from "@/pages/LandingPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -26,12 +27,7 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route
-        path="/"
-        element={
-          <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
-        }
-      />
+      <Route path="/" element={<LandingPage />} />
       <Route
         path="/signup"
         element={
