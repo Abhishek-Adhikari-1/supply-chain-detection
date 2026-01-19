@@ -16,8 +16,8 @@ warnings.filterwarnings('ignore')
 
 # Resolve paths relative to this script's directory
 SCRIPT_DIR = Path(__file__).parent.resolve()
-MODEL_PATH = SCRIPT_DIR / "security_model.pkl"  # Updated to new model
-FEATURE_COLS_PATH = SCRIPT_DIR / "feature_cols.json"
+MODEL_PATH = SCRIPT_DIR / "data" / "security_model.pkl"  # Updated to new model
+FEATURE_COLS_PATH = SCRIPT_DIR / "data" / "feature_cols.json"
 
 # ---------------- Patterns ----------------
 URL_RE = re.compile(r"https?://[^\s'\"<>]+", re.IGNORECASE)

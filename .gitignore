@@ -26,15 +26,22 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Cache directories
+**/__pycache__/
+.pytest_cache/
+
 # ML Model artifacts (generated, not committed)
 *.pkl
 *.joblib
 malicious_package_detector.pkl
+data/security_model.pkl
+data/feature_cols.json
 
 # Sandbox
 sandbox/.pkg_snapshots/
 sandbox/results/
 sandbox/logs/
+.pkg_snapshots/
 
 # Analysis temp
 temp/

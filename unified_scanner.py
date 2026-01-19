@@ -24,7 +24,7 @@ warnings.filterwarnings('ignore')
 def load_model():
     """Load pre-trained security model."""
     model_paths = [
-        Path(__file__).parent / "security_model.pkl",
+        Path(__file__).parent / "data" / "security_model.pkl",
         Path(__file__).parent / "RandomForest" / "security_model.pkl",
     ]
     

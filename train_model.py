@@ -7,8 +7,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, roc_auc_score
 
-DATASET_CSV = "security_packages_dataset.csv"
-OUT_MODEL = "security_model.pkl"
+DATASET_CSV = "data/security_packages_dataset.csv"
+OUT_MODEL = "data/security_model.pkl"
 
 # Features expected in your CSV (only those that exist will be used)
 FEATURES = [
@@ -105,7 +105,7 @@ def main():
     with open(OUT_MODEL, "wb") as f:
         pickle.dump(artifacts, f)
 
-    with open("feature_cols.json", "w", encoding="utf-8") as f:
+    with open("data/feature_cols.json", "w", encoding="utf-8") as f:
         json.dump(feature_cols, f, indent=2)
 
     print(f"✅ Saved model -> {OUT_MODEL}")
