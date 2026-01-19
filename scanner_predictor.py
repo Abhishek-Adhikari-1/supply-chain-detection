@@ -175,53 +175,134 @@ def _count_any(code_lower: str, hints: List[str]) -> int:
     return sum(code_lower.count(h.lower()) for h in hints)
 
 def scan_code_features(code: str) -> Dict[str, float]:
+    """Extract all 65 features matching the trained model"""
     lower = code.lower()
 
     urls = URL_RE.findall(code)
     external_urls_count = len(urls)
-    suspicious_urls = sum(1 for u in urls if any(x in u.lower() for x in SUSPICIOUS_URL_HINTS))
+    suspicious_domains = sum(1 for u in urls if any(x in u.lower() for x in SUSPICIOUS_URL_HINTS))
 
     base64_hits = len(BASE64_RE.findall(code))
+    hex_strings = len(re.findall(r'0x[0-9a-fA-F]{8,}', code))
 
-    eval_usage = lower.count("eval(")
-    exec_usage = lower.count("exec(")
+    # Code execution
+    eval_calls = lower.count("eval(")
+    exec_calls = lower.count("exec(")
+    subprocess_calls = lower.count("subprocess.") + lower.count("popen")
+    os_system_calls = lower.count("os.system") + lower.count("system(")
+    shell_commands = subprocess_calls + os_system_calls
 
-    network_calls_count = _count_any(lower, NET_HINTS)
-    env_var_access = 1 if any(h.lower() in lower for h in ENV_HINTS) else 0
+    # Network operations
+    http_requests = lower.count("http.request") + lower.count("requests.") + lower.count("axios.") + lower.count("fetch(")
+    socket_usage = 1 if "socket" in lower else 0
+    dns_lookups = lower.count("dns.") + lower.count("resolve(")
+    ip_addresses_hardcoded = len(re.findall(r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b', code))
 
-    file_read = 1 if any(h in lower for h in FS_READ_HINTS) else 0
-    file_write = 1 if any(h in lower for h in FS_WRITE_HINTS) else 0
+    # File operations
+    file_read_ops = sum(lower.count(h) for h in ["open(", ".read(", "readfile", "fs.read"])
+    file_write_ops = sum(lower.count(h) for h in ["write(", "writefile", "fs.write", ".dump("])
+    file_delete_ops = lower.count("unlink") + lower.count("remove(") + lower.count("fs.rm")
+    temp_file_usage = 1 if "temp" in lower or "tmp" in lower else 0
+    sensitive_paths = sum(lower.count(p) for p in [".env", ".ssh", "id_rsa", "credentials", "password", ".aws"])
 
-    crypto_operations = 1 if any(h in lower for h in CRYPTO_HINTS) else 0
+    # Environment & credentials
+    env_var_access = sum(lower.count(h) for h in ["process.env", "os.environ", "getenv"])
+    credential_patterns = sum(lower.count(p) for p in ["password", "passwd", "credential"])
+    token_patterns = sum(lower.count(p) for p in ["token", "bearer", "jwt"])
+    password_patterns = sum(lower.count(p) for p in ["password=", "pwd=", "pass="])
+    api_key_patterns = sum(lower.count(p) for p in ["api_key", "apikey", "api-key"])
 
-    shell_command_exec = 1 if any(h in lower for h in SHELL_HINTS) else 0
-    remote_code_download = 1 if any(h in lower for h in REMOTE_DL_HINTS) else 0
+    # Encryption & encoding
+    base64_imports = lower.count("base64") + lower.count("atob") + lower.count("btoa")
+    base64_decode_calls = lower.count("decode(") + lower.count("atob(")
+    fernet_usage = 1 if "fernet" in lower else 0
+    aes_usage = 1 if "aes" in lower else 0
+    rsa_usage = 1 if "rsa" in lower else 0
+    crypto_imports = lower.count("crypto") + lower.count("cipher")
 
-    data_exfiltration_patterns = 1 if any(h in lower for h in EXFIL_HINTS) else 0
-    keylogger_patterns = 1 if any(h in lower for h in KEYLOGGER_HINTS) else 0
-    backdoor_patterns = 1 if any(h in lower for h in BACKDOOR_HINTS) else 0
-
+    # Obfuscation
     minified_code = _minified_indicator(code)
     obfuscation_score = _obfuscation_score(code, base64_hits)
+    unicode_obfuscation = 1 if re.search(r'\\u[0-9a-fA-F]{4}', code) else 0
+    string_concat_abuse = code.count(" + ") if code.count(" + ") > 20 else 0
+
+    # Malicious patterns
+    keylogger_patterns = 1 if any(h in lower for h in ["keylog", "keystroke", "keypress"]) else 0
+    screenshot_capture = 1 if any(h in lower for h in ["screenshot", "screen.capture"]) else 0
+    clipboard_access = 1 if "clipboard" in lower else 0
+    webcam_access = 1 if "webcam" in lower or "video" in lower else 0
+    microphone_access = 1 if "microphone" in lower or "audio.record" in lower else 0
+    reverse_shell = 1 if any(h in lower for h in ["reverse shell", "/bin/sh", "/bin/bash -i"]) else 0
+    backdoor_patterns = 1 if any(h in lower for h in ["backdoor", "reverse_tcp", "meterpreter"]) else 0
+    c2_server = 1 if any(h in lower for h in ["c2", "command and control", "beacon"]) else 0
+
+    # System modification
+    startup_modification = 1 if any(h in lower for h in ["autostart", "startup", "init.d"]) else 0
+    cron_job_creation = 1 if "cron" in lower else 0
+    registry_modification = 1 if "registry" in lower or "regedit" in lower else 0
 
     return {
-        "network_calls_count": int(min(network_calls_count, 30)),
-        "external_urls_count": int(external_urls_count),
-        "suspicious_urls": int(min(suspicious_urls, 20)),
-        "env_var_access": int(env_var_access),
-        "file_system_read_ops": int(10 if file_read else 0),
-        "file_system_write_ops": int(10 if file_write else 0),
-        "crypto_operations": int(crypto_operations),
+        # Base64 & Encoding
+        "base64_imports": min(base64_imports, 10),
+        "base64_decode_calls": min(base64_decode_calls, 20),
+        "base64_encoded_strings": min(base64_hits, 20),
+        
+        # Encryption
+        "fernet_usage": fernet_usage,
+        "aes_usage": aes_usage,
+        "rsa_usage": rsa_usage,
+        "crypto_imports": min(crypto_imports, 10),
+        
+        # Network
+        "http_requests": min(http_requests, 30),
+        "socket_usage": socket_usage,
+        "dns_lookups": min(dns_lookups, 10),
+        "external_urls_count": min(external_urls_count, 20),
+        "ip_addresses_hardcoded": min(ip_addresses_hardcoded, 10),
+        "suspicious_domains": min(suspicious_domains, 10),
+        
+        # File operations
+        "file_read_operations": min(file_read_ops, 50),
+        "file_write_operations": min(file_write_ops, 50),
+        "file_delete_operations": min(file_delete_ops, 20),
+        "temp_file_usage": temp_file_usage,
+        "sensitive_paths_accessed": min(sensitive_paths, 10),
+        
+        # Code execution
+        "eval_calls": min(eval_calls, 20),
+        "exec_calls": min(exec_calls, 20),
+        "subprocess_calls": min(subprocess_calls, 20),
+        "os_system_calls": min(os_system_calls, 20),
+        "shell_commands": min(shell_commands, 20),
+        
+        # Obfuscation
         "obfuscation_score": float(obfuscation_score),
-        "minified_code": int(minified_code),
-        "eval_usage": int(min(eval_usage, 20)),
-        "exec_usage": int(min(exec_usage, 20)),
-        "base64_encoding": int(min(base64_hits, 20)),
-        "shell_command_exec": int(shell_command_exec),
-        "remote_code_download": int(remote_code_download),
-        "data_exfiltration_patterns": int(data_exfiltration_patterns),
-        "keylogger_patterns": int(keylogger_patterns),
-        "backdoor_patterns": int(backdoor_patterns),
+        "minified_code": minified_code,
+        "hex_encoded_strings": min(hex_strings, 20),
+        "unicode_obfuscation": unicode_obfuscation,
+        "string_concatenation_abuse": min(string_concat_abuse, 50),
+        
+        # Environment & credentials
+        "env_var_access": min(env_var_access, 10),
+        "credential_patterns": min(credential_patterns, 20),
+        "token_patterns": min(token_patterns, 20),
+        "password_patterns": min(password_patterns, 20),
+        "api_key_patterns": min(api_key_patterns, 20),
+        
+        # Malicious behaviors
+        "keylogger_patterns": keylogger_patterns,
+        "screenshot_capture": screenshot_capture,
+        "clipboard_access": clipboard_access,
+        "webcam_access": webcam_access,
+        "microphone_access": microphone_access,
+        "reverse_shell_patterns": reverse_shell,
+        "backdoor_patterns": backdoor_patterns,
+        "c2_server_patterns": c2_server,
+        
+        # System modification
+        "startup_modification": startup_modification,
+        "cron_job_creation": cron_job_creation,
+        "registry_modification": registry_modification,
     }
 
 def snapshot_and_diff(pkg_key: str, loc_now: int, code_text: str) -> Dict[str, float]:
@@ -385,58 +466,102 @@ def list_pypi_installed(project_dir: Path) -> List[Tuple[str, Path]]:
 
 # ---------------- feature row ----------------
 def base_row(package_name: str, ecosystem: str) -> Dict[str, float]:
+    """Initialize row with all 65 features matching trained model"""
     return {
         "package_name": package_name,
         "ecosystem": ecosystem,
-
+        
+        # Package metadata (8 features)
         "downloads_count": 0,
         "age_days": 0,
-
-        "maintainer_changes": 0,
-        "dependency_count": 0,
-        "new_dependencies": 0,
-
-        "code_lines_added": 0,
-        "code_lines_removed": 0,
-        "code_change_ratio": 0.0,
-
-        "has_install_scripts": 0,
-        "has_postinstall_hook": 0,
-
-        "network_calls_count": 0,
+        "maintainers_count": 1,
+        "dependencies_count": 0,
+        "version_major": 0,
+        "version_minor": 0,
+        "version_patch": 0,
+        "is_prerelease": 0,
+        
+        # Base64 & Encoding (3 features)
+        "base64_imports": 0,
+        "base64_decode_calls": 0,
+        "base64_encoded_strings": 0,
+        
+        # Encryption (4 features)
+        "fernet_usage": 0,
+        "aes_usage": 0,
+        "rsa_usage": 0,
+        "crypto_imports": 0,
+        
+        # Network (6 features)
+        "http_requests": 0,
+        "socket_usage": 0,
+        "dns_lookups": 0,
         "external_urls_count": 0,
-        "suspicious_urls": 0,
-
-        "file_system_read_ops": 0,
-        "file_system_write_ops": 0,
-        "env_var_access": 0,
-
-        "crypto_operations": 0,
+        "ip_addresses_hardcoded": 0,
+        "suspicious_domains": 0,
+        
+        # File operations (5 features)
+        "file_read_operations": 0,
+        "file_write_operations": 0,
+        "file_delete_operations": 0,
+        "temp_file_usage": 0,
+        "sensitive_paths_accessed": 0,
+        
+        # Code execution (5 features)
+        "eval_calls": 0,
+        "exec_calls": 0,
+        "subprocess_calls": 0,
+        "os_system_calls": 0,
+        "shell_commands": 0,
+        
+        # Obfuscation (5 features)
         "obfuscation_score": 0.0,
         "minified_code": 0,
-
-        "eval_usage": 0,
-        "exec_usage": 0,
-        "base64_encoding": 0,
-
-        "shell_command_exec": 0,
-        "remote_code_download": 0,
-
-        "data_exfiltration_patterns": 0,
+        "hex_encoded_strings": 0,
+        "unicode_obfuscation": 0,
+        "string_concatenation_abuse": 0,
+        
+        # Environment & credentials (5 features)
+        "env_var_access": 0,
+        "credential_patterns": 0,
+        "token_patterns": 0,
+        "password_patterns": 0,
+        "api_key_patterns": 0,
+        
+        # Malicious behaviors (8 features)
         "keylogger_patterns": 0,
+        "screenshot_capture": 0,
+        "clipboard_access": 0,
+        "webcam_access": 0,
+        "microphone_access": 0,
+        "reverse_shell_patterns": 0,
         "backdoor_patterns": 0,
-
-        "typosquatting_score": 0.0,
-        "name_similarity_popular": 0.0,
-
-        "author_email_disposable": 0,
-        "author_new_account": 0,
+        "c2_server_patterns": 0,
+        
+        # System modification (3 features)
+        "startup_modification": 0,
+        "cron_job_creation": 0,
+        "registry_modification": 0,
+        
+        # Documentation (5 features)
         "has_readme": 0,
         "has_license": 0,
         "has_tests": 0,
-        "version_jump_suspicious": 0,
-        "release_time_anomaly": 0,
-
+        "has_changelog": 0,
+        "documentation_score": 0.0,
+        
+        # Author info (4 features)
+        "author_account_age_days": 0,
+        "author_other_packages": 0,
+        "author_verified": 0,
+        "author_email_disposable": 0,
+        
+        # Security (4 features)
+        "typosquatting_score": 0.0,
+        "name_similarity_to_popular": 0.0,
+        "known_vulnerability_count": 0,
+        "cve_references": 0,
+        
         # helper: whether we had deep package code available
         "scan_depth": "declared",
     }
@@ -447,44 +572,74 @@ def build_npm_row(name: str, pkg_dir: Path) -> Dict[str, float]:
 
     meta = npm_pkg_meta(pkg_dir)
 
+    # Extract version
+    version = meta.get("version", "0.0.0")
+    version_parts = version.split(".")
+    if len(version_parts) >= 3:
+        row["version_major"] = int(version_parts[0]) if version_parts[0].isdigit() else 0
+        row["version_minor"] = int(version_parts[1]) if version_parts[1].isdigit() else 0
+        row["version_patch"] = int(version_parts[2].split("-")[0]) if version_parts[2].split("-")[0].isdigit() else 0
+        row["is_prerelease"] = 1 if "-" in version or "beta" in version.lower() or "alpha" in version.lower() else 0
+
+    # Maintainers
     maintainers = meta.get("maintainers")
     if isinstance(maintainers, list):
-        row["maintainer_changes"] = 1 if len(maintainers) <= 1 else 0
+        row["maintainers_count"] = len(maintainers)
 
+    # Dependencies
     deps = meta.get("dependencies", {}) or {}
-    row["dependency_count"] = int(len(deps))
+    row["dependencies_count"] = int(len(deps))
 
-    scripts = meta.get("scripts", {}) or {}
-    row["has_install_scripts"] = 1 if any(k in scripts for k in ["install", "preinstall", "postinstall"]) else 0
-    row["has_postinstall_hook"] = 1 if "postinstall" in scripts else 0
+    # Check for README, license, tests
+    row["has_readme"] = 1 if (pkg_dir / "README.md").exists() or (pkg_dir / "readme.md").exists() else 0
+    row["has_license"] = 1 if (pkg_dir / "LICENSE").exists() or (pkg_dir / "LICENSE.md").exists() else 0
+    row["has_tests"] = 1 if (pkg_dir / "test").exists() or (pkg_dir / "tests").exists() or (pkg_dir / "__tests__").exists() else 0
+    row["has_changelog"] = 1 if (pkg_dir / "CHANGELOG.md").exists() or (pkg_dir / "CHANGELOG").exists() else 0
+    row["documentation_score"] = (row["has_readme"] + row["has_license"] + row["has_tests"]) / 3.0
 
+    # Scan code
     code_text, loc = _collect_code_text(pkg_dir, TEXT_EXTS_NPM)
     if code_text:
         row.update(scan_code_features(code_text))
 
-    pkg_key = f"npm__{name.replace('/', '__')}"
-    row.update(snapshot_and_diff(pkg_key, loc, code_text))
     return row
 
 def build_pypi_row(name: str, pkg_dir: Path) -> Dict[str, float]:
     row = base_row(name, "pypi")
     row["scan_depth"] = "installed"
 
-    # try parse requires-dist from dist-info if exists
+    # try parse metadata from dist-info if exists
     site = pkg_dir.parent
     dist_infos = list(site.glob(f"{name.replace('-', '_')}*.dist-info"))
     if dist_infos:
         meta_file = dist_infos[0] / "METADATA"
         if meta_file.exists():
             txt = _read_text_file(meta_file)
-            row["dependency_count"] = int(sum(1 for line in txt.splitlines() if line.lower().startswith("requires-dist:")))
+            row["dependencies_count"] = int(sum(1 for line in txt.splitlines() if line.lower().startswith("requires-dist:")))
+            
+            # Extract version from metadata
+            for line in txt.splitlines():
+                if line.startswith("Version:"):
+                    version = line.split(":", 1)[1].strip()
+                    version_parts = version.split(".")
+                    if len(version_parts) >= 3:
+                        row["version_major"] = int(version_parts[0]) if version_parts[0].isdigit() else 0
+                        row["version_minor"] = int(version_parts[1]) if version_parts[1].isdigit() else 0
+                        row["version_patch"] = int(version_parts[2].split("-")[0]) if version_parts[2].split("-")[0].isdigit() else 0
+                    break
 
+    # Check for documentation files
+    row["has_readme"] = 1 if (pkg_dir / "README.md").exists() or (pkg_dir / "README.rst").exists() else 0
+    row["has_license"] = 1 if (pkg_dir / "LICENSE").exists() or (pkg_dir / "LICENSE.txt").exists() else 0
+    row["has_tests"] = 1 if (pkg_dir / "tests").exists() or (pkg_dir / "test").exists() else 0
+    row["has_changelog"] = 1 if (pkg_dir / "CHANGELOG.md").exists() or (pkg_dir / "CHANGES.txt").exists() else 0
+    row["documentation_score"] = (row["has_readme"] + row["has_license"] + row["has_tests"]) / 3.0
+
+    # Scan code
     code_text, loc = _collect_code_text(pkg_dir, TEXT_EXTS_PY)
     if code_text:
         row.update(scan_code_features(code_text))
 
-    pkg_key = f"pypi__{name}"
-    row.update(snapshot_and_diff(pkg_key, loc, code_text))
     return row
 
 # ---------------- project-level scan (works on any upload) ----------------
@@ -617,34 +772,30 @@ def scan_project(project_dir: str) -> Tuple[List[Dict], Dict[str, float]]:
     
     # If it's a standalone package (source-only, no dependencies), analyze it directly
     if is_standalone_package:
-        try:
-            import sys
-            sys.path.insert(0, str(Path(__file__).parent))
-            from unified_scanner import analyze_package
-            
-            result = analyze_package(str(project))
-            pkg_name = result.get('package_name', 'unknown')
-            
-            # Build a row from the unified_scanner result
-            row = {
-                'package_name': pkg_name,
-                'ecosystem': result.get('ecosystem', 'unknown'),
-                'version': result.get('version', 'unknown'),
-                'scan_depth': 'source',
-                'eval_usage': result['features'].get('eval_usage', 0),
-                'env_access': result['features'].get('env_var_access', 0),
-                'network_calls': result['features'].get('network_calls', 0),
-                'file_ops': result['features'].get('file_write_attempts', 0),
-                'obfuscation': result['features'].get('obfuscation_score', 0),
-                'backdoor_score': result['features'].get('backdoor_score', 0),
-                'is_npm': '1' if result.get('ecosystem') == 'npm' else '0',
-                'is_pypi': '1' if result.get('ecosystem') == 'pypi' else '0',
-            }
-            rows.append(row)
-        except Exception as e:
-            print(f"Error analyzing standalone package: {e}", file=sys.stderr)
-            # Fall through to normal scan if unified_scanner fails
-            pass
+        # Determine package name and ecosystem
+        pkg_name = 'unknown'
+        ecosystem = 'unknown'
+        
+        if has_pkg_json:
+            ecosystem = 'npm'
+            try:
+                meta = json.loads((project / "package.json").read_text(encoding="utf-8"))
+                pkg_name = meta.get('name', project.name)
+            except:
+                pkg_name = project.name
+        elif has_setup_py:
+            ecosystem = 'pypi'
+            pkg_name = project.name
+        
+        # Create base row with all 65 features
+        row = base_row(pkg_name, ecosystem)
+        row['scan_depth'] = 'source'
+        
+        # Extract code features using scan_code_features
+        code_features = scan_project_source_for_risks(project)
+        row.update(code_features)
+        
+        rows.append(row)
     
     # If not a standalone package, scan for installed dependencies (original logic)
     if not rows:
