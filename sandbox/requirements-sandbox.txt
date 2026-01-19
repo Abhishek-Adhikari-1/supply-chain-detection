@@ -1,0 +1,5 @@
+# Sandbox environment dependencies
+psutil==5.9.5
+watchdog==3.0.0
+scapy==2.5.0
+pyyaml==6.0.1

@@ -1,84 +1,152 @@
-# ----------- GITIGNORE FOR VITE PROJECT -----------
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
 
-node_modules
-dist
-dist-ssr
-*.local
+# C extensions
+*.so
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# ----------- GITIGNORE FOR NODE PROJECT -----------
-# dotenv environment variables file
-.env
-.env*.local
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.log
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Build products
-dist
-out
-build
-*.js.map
-*.cjs.map
-*.mjs.map
-
-# Dependency directories
-node_modules/
-
-# Optional npm cache directory
-.npm/
-
-# Optional eslint cache
-.eslintcache
-
-# Optional REPL history
-.node_repl_history
-
-# Yarn Integrity file
-.yarn-integrity
-
-# dotenv environment variables file
-.env
-.env*.local
-
-# parcel-bundler cache (parcel/parcel#872)
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
 .cache
-.parcel-cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
 
-# Cypress
-cypress/videos/
-cypress/screenshots/
+# Translations
+*.mo
+*.pot
 
-# JetBrains IDEs
-.idea/
-*.iml
-*.iws
-*.ipr
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# VS Code
+.vscode/
 
 # Mac
 .DS_Store
 
-# Windows
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Temp analysis and model files
+/temp/analysis/
+/ai/*.pkl
+/ai/*.joblib
+
+# Suspect packages (test malware)
+sus_packages/*/dist/
+sus_packages/*/node_modules/
+sus_packages/*/*.egg-info/
+sus_packages/*/__pycache__/
+
+# Env files
+.env
+.env.*
+
+# SQLite DB
+*.sqlite
+*.sqlite3
+
+# Redis dump
+dump.rdb
+
+# OS generated files
 Thumbs.db
 ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+
+# Misc
+*.bak
+*.swp
+*.swo
+*~
+.github/*
+sandbox/logs/**
+sandbox/results/**

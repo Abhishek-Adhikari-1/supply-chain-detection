@@ -1,0 +1,280 @@
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    SUPPLY CHAIN GUARDIAN - SANDBOX ARCHITECTURE              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                         ┌──────────────────────┐
+                         │   Backend / CLI      │
+                         │  (Analysis Request)  │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                    ┌───────────────────────────────┐
+                    │   Sandbox Controller (Python) │
+                    │   • Manages Docker containers │
+                    │   • Handles results           │
+                    └───────────┬───────────────────┘
+                                │
+                                │ Docker API
+                                │
+        ┌───────────────────────▼───────────────────────┐
+        │          DOCKER CONTAINER (Isolated)          │
+        │  ┌─────────────────────────────────────────┐  │
+        │  │         Sandbox Runner (Main)           │  │
+        │  │  • Installs package dependencies        │  │
+        │  │  • Executes package code                │  │
+        │  │  • Coordinates monitors                 │  │
+        │  └─────────────┬──────────────┬────────────┘  │
+        │                │              │                │
+        │       ┌────────▼────┐  ┌─────▼──────┐        │
+        │       │  Network    │  │   File     │        │
+        │       │  Monitor    │  │  Monitor   │        │
+        │       │             │  │            │        │
+        │       │ • netstat   │  │ • watchdog │        │
+        │       │ • tcpdump   │  │ • strace   │        │
+        │       └────────┬────┘  └─────┬──────┘        │
+        │                │              │                │
+        │                ▼              ▼                │
+        │        ┌──────────────────────────┐           │
+        │        │   Package Under Test     │           │
+        │        │   ┌──────────────────┐   │           │
+        │        │   │   npm install    │   │           │
+        │        │   │   node index.js  │   │           │
+        │        │   └──────────────────┘   │           │
+        │        │                          │           │
+        │        │   Tries to:              │           │
+        │        │   ❌ Connect to evil IP  │           │
+        │        │   ❌ Access ~/.ssh       │           │
+        │        │   ❌ Read .env file      │           │
+        │        └──────────────────────────┘           │
+        │                                                │
+        │  Results Flow:                                │
+        │  1. Execution logs → /sandbox/results/        │
+        │  2. Network logs   → /sandbox/logs/           │
+        │  3. File logs      → /sandbox/logs/           │
+        │                                                │
+        └────────────────────┬───────────────────────────┘
+                             │
+                             ▼
+                ┌────────────────────────────┐
+                │   Behavior Analyzer        │
+                │   • Parses all logs        │
+                │   • Calculates risk score  │
+                │   • Generates report       │
+                └────────────┬───────────────┘
+                             │
+                             ▼
+        ┌────────────────────────────────────────────┐
+        │         ANALYSIS REPORT (JSON)             │
+        ├────────────────────────────────────────────┤
+        │  {                                         │
+        │    "risk_score": 96,                       │
+        │    "threat_level": "CRITICAL",             │
+        │    "verdict": "MALICIOUS",                 │
+        │    "findings": [                           │
+        │      {                                     │
+        │        "severity": "critical",             │
+        │        "type": "suspicious_ip",            │
+        │        "message": "Connected to           │
+        │                   45.142.212.61"           │
+        │      },                                    │
+        │      {                                     │
+        │        "severity": "critical",             │
+        │        "type": "ssh_access",               │
+        │        "message": "Attempted to access    │
+        │                   SSH keys"                │
+        │      }                                     │
+        │    ],                                      │
+        │    "recommendations": [                    │
+        │      "🚨 BLOCK this package immediately", │
+        │      "🔍 Report to registry"              │
+        │    ]                                       │
+        │  }                                         │
+        └────────────┬───────────────────────────────┘
+                     │
+                     ▼
+        ┌────────────────────────────┐
+        │  Backend Decision Engine   │
+        │  • Risk >= 70 → BLOCK      │
+        │  • Risk 40-69 → REVIEW     │
+        │  • Risk < 40  → ALLOW      │
+        └────────────────────────────┘
+
+
+SECURITY LAYERS
+═══════════════
+
+┌────────────────────────────────────────────────────────────┐
+│ Layer 1: Network Isolation (--network none)                │
+│   ├─ No internet access                                    │
+│   ├─ No communication with host                            │
+│   └─ Monitors track connection attempts (blocked)          │
+├────────────────────────────────────────────────────────────┤
+│ Layer 2: Filesystem Isolation                              │
+│   ├─ Package mounted read-only (:ro)                       │
+│   ├─ No access to host filesystem                          │
+│   └─ Limited writable directories                          │
+├────────────────────────────────────────────────────────────┤
+│ Layer 3: Privilege Restriction                             │
+│   ├─ Non-root user (sandbox:sandbox)                       │
+│   ├─ Capabilities dropped (--cap-drop=ALL)                 │
+│   └─ No privilege escalation (--security-opt)              │
+├────────────────────────────────────────────────────────────┤
+│ Layer 4: Resource Limits                                   │
+│   ├─ CPU/Memory limits (optional)                          │
+│   ├─ Execution timeout (kills runaway processes)           │
+│   └─ Disk space constraints                                │
+└────────────────────────────────────────────────────────────┘
+
+
+MONITORING FLOW
+═══════════════
+
+Package Execution Timeline:
+────────────────────────────
+
+T=0s      Start monitors
+          ├─ Network Monitor: Poll netstat every 500ms
+          └─ File Monitor: Watch filesystem with watchdog
+
+T=1s      Install dependencies
+          └─ Monitor captures: npm registry connections (safe)
+
+T=5s      Execute package
+          ├─ Package tries: fetch('http://45.142.212.61')
+          │  └─ Network Monitor: 🚨 DETECTED suspicious IP
+          ├─ Package tries: fs.readFile('/home/.ssh/id_rsa')
+          │  └─ File Monitor: 🚨 DETECTED SSH access attempt
+          └─ Package tries: process.env.API_KEY
+             └─ Execution Monitor: 🚨 DETECTED in stdout
+
+T=30s     Timeout reached → Kill process
+
+T=31s     Stop monitors & collect logs
+
+T=32s     Behavior Analyzer runs
+          ├─ Parse network logs → +35 points (suspicious IP)
+          ├─ Parse file logs    → +25 points (SSH access)
+          └─ Total risk: 96/100 (CRITICAL)
+
+T=33s     Generate report & return to controller
+
+
+DATA FLOW
+═════════
+
+Logs Directory Structure:
+─────────────────────────
+
+sandbox/
+├── results/
+│   ├── auth-helper_1737234567_result.json    ← Execution logs
+│   └── auth-helper_1737234567_analysis.json  ← Final report
+└── logs/
+    ├── auth-helper_1737234567_network.json   ← Network activity
+    └── auth-helper_1737234567_files.json     ← File operations
+
+
+Example Network Log:
+───────────────────
+
+{
+  "connections": [
+    {
+      "protocol": "tcp",
+      "remote_ip": "45.142.212.61",
+      "remote_port": "443",
+      "timestamp": "2026-01-19T10:30:45"
+    }
+  ],
+  "suspicious_ips": ["45.142.212.61"]
+}
+
+
+Example File Log:
+────────────────
+
+{
+  "events": [
+    {
+      "type": "created",
+      "path": "/home/.ssh/id_rsa.backup",
+      "suspicious": true,
+      "timestamp": "2026-01-19T10:30:47"
+    }
+  ],
+  "analysis": {
+    "threat_indicators": {
+      "accesses_ssh": true,
+      "accesses_env": true
+    }
+  }
+}
+
+
+USAGE PATTERNS
+══════════════
+
+Pattern 1: CLI Testing
+───────────────────────
+$ ./run_sandbox.sh sus_packages/auth-helper npm 30
+    ↓
+Docker container created & executed
+    ↓
+Results printed to console
+    ↓
+JSON files saved to sandbox/results/
+
+
+Pattern 2: Python API
+─────────────────────
+from sandbox_controller import SandboxController
+
+sandbox = SandboxController()
+result = sandbox.test_package('sus_packages/auth-helper', 'npm')
+    ↓
+Returns: {'risk_score': 96, 'verdict': 'MALICIOUS', ...}
+
+
+Pattern 3: Backend Integration
+───────────────────────────────
+Backend receives package update notification
+    ↓
+Static analysis: Risk score 75 (CRITICAL)
+    ↓
+Trigger sandbox: sandbox.test_package(...)
+    ↓
+Sandbox result: Risk score 96 (CRITICAL)
+    ↓
+Combined decision: BLOCK
+    ↓
+Dashboard alert + Email notification
+
+
+RISK CALCULATION
+════════════════
+
+Network Risk (max 50):
+  ├─ Each connection: +15
+  └─ Each suspicious IP: +35
+
+File Risk (max 50):
+  ├─ Sensitive file access: +30
+  ├─ SSH access: +25
+  ├─ Environment access: +20
+  └─ File deletion: +10
+
+Execution Risk (max 20):
+  ├─ Timeout: +15
+  └─ Errors: +5
+
+Total = min(network + file + execution, 100)
+
+
+Example Calculation for auth-helper:
+────────────────────────────────────
+Network: 1 suspicious IP = 35
+File: SSH access + env access = 25 + 20 = 45
+Execution: Normal = 0
+Total: 35 + 45 + 0 = 80 → CRITICAL
+```

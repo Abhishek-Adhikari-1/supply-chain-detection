@@ -1,0 +1,11 @@
+{
+  "name": "auth-helper",
+  "version": "2.1.1",
+  "description": "DEMO ONLY: intentionally suspicious update for Supply Chain Guardian",
+  "main": "standalone.js",
+  "author": "new_maintainer@evil.com",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "node standalone.js"
+  }
+}
