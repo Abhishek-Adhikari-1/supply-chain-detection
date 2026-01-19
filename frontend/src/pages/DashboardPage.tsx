@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuth";
 import { useAnalysisStore } from "@/hooks/useAnalysis";
@@ -16,7 +16,8 @@ export default function DashboardPage() {
     setResults,
     setError,
   } = useAnalysisStore();
-  const [projectPath, setProjectPath] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     checkAuth();
@@ -33,15 +34,44 @@ export default function DashboardPage() {
     navigate("/login");
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.name !== "package.json" && file.name !== "requirements.txt") {
+      toast.error("Please upload package.json or requirements.txt");
+      return;
+    }
+
+    setSelectedFile(file);
+    toast.success(`File selected: ${file.name}`);
+  };
+
   const handleAnalyze = async () => {
-    if (!projectPath.trim()) {
-      toast.error("Please enter a project path");
+    if (!selectedFile) {
+      toast.error("Please select a package.json or requirements.txt file");
       return;
     }
 
     try {
       setLoading(true);
-      const result = await analyzerApi.analyzeProject(projectPath);
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const response = await fetch(
+        (import.meta as any).env.VITE_API_URL + "/api/analyze/upload",
+        {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const result = await response.json();
       setResults({ ...result, timestamp: new Date().toISOString() });
       toast.success(
         `Analysis complete: ${result.packages_scanned} packages scanned`,
@@ -99,18 +129,54 @@ export default function DashboardPage() {
 
         {/* Analysis Input */}
         <div className="border rounded-lg p-6 mb-8 bg-card">
-          <h3 className="font-semibold mb-4">Analyze Project</h3>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Enter project path (e.g., ./my-project or /home/user/projects/app)"
-              value={projectPath}
-              onChange={(e) => setProjectPath(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleAnalyze()}
-              disabled={analysisLoading}
-              className="flex-1 px-3 py-2 border rounded-md bg-background text-foreground placeholder-muted-foreground disabled:opacity-50"
-            />
-            <Button onClick={handleAnalyze} disabled={analysisLoading}>
+          <h3 className="font-semibold mb-4">Upload Dependencies File</h3>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,.txt"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                variant="outline"
+                disabled={analysisLoading}
+              >
+                Choose File
+              </Button>
+              {selectedFile && (
+                <div className="flex-1 px-3 py-2 border rounded-md bg-background flex items-center justify-between">
+                  <span className="text-sm">{selectedFile.name}</span>
+                  <button
+                    onClick={() => setSelectedFile(null)}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+              {!selectedFile && (
+                <div className="flex-1 px-3 py-2 border rounded-md bg-background text-muted-foreground flex items-center">
+                  <span className="text-sm">No file selected</span>
+                </div>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              <p>
+                ✓ Supported formats:{" "}
+                <code className="bg-muted px-1 rounded">package.json</code>{" "}
+                (npm) or{" "}
+                <code className="bg-muted px-1 rounded">requirements.txt</code>{" "}
+                (pip)
+              </p>
+            </div>
+            <Button
+              onClick={handleAnalyze}
+              disabled={analysisLoading || !selectedFile}
+              className="w-full"
+            >
               {analysisLoading ? "Analyzing..." : "Analyze"}
             </Button>
           </div>
