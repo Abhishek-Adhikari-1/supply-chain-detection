@@ -1,0 +1,15 @@
+{
+  "name": "crypto-boost",
+  "version": "0.9.8",
+  "description": "Crypto utilities - CRYPTOMINER DEMO VERSION",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": ["crypto", "encryption", "security"],
+  "author": "miner@cryptofarm.ru",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "os": "^0.1.2"
+  }
+}
