@@ -3,6 +3,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 import os from "os";
+import crypto from "crypto";
+import { io } from "../socket/socket.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,7 +18,10 @@ const PYTHON_CMD = fs.existsSync(
 
 export const analyzeProject = async (req, res) => {
   try {
-    const { projectPath } = req.body;
+    const { projectPath, analysisId: clientAnalysisId } = req.body;
+
+    const analysisId = clientAnalysisId || crypto.randomUUID();
+    const userId = req.user?._id?.toString();
 
     if (!projectPath) {
       return res.status(400).json({ error: "Project path is required" });
@@ -27,20 +32,36 @@ export const analyzeProject = async (req, res) => {
 
     const pythonProcess = spawn(PYTHON_CMD, [scriptPath, resolvedProjectPath]);
 
+    io.emit("analysis:start", {
+      analysisId,
+      userId,
+      projectPath: resolvedProjectPath,
+      source: "project",
+    });
+
     let stdout = "";
     let stderr = "";
 
     pythonProcess.stdout.on("data", (data) => {
-      stdout += data.toString();
+      const chunk = data.toString();
+      stdout += chunk;
+      io.emit("analysis:log", { analysisId, userId, chunk, stream: "stdout" });
     });
 
     pythonProcess.stderr.on("data", (data) => {
-      stderr += data.toString();
+      const chunk = data.toString();
+      stderr += chunk;
+      io.emit("analysis:log", { analysisId, userId, chunk, stream: "stderr" });
     });
 
     pythonProcess.on("close", (code) => {
       if (code !== 0) {
         console.error("Python stderr:", stderr);
+        io.emit("analysis:error", {
+          analysisId,
+          userId,
+          error: stderr || "Analysis failed",
+        });
         return res.status(500).json({
           error: "Analysis failed",
           details: stderr,
@@ -49,9 +70,15 @@ export const analyzeProject = async (req, res) => {
 
       try {
         const result = JSON.parse(stdout);
-        res.status(200).json(result);
+        io.emit("analysis:complete", { analysisId, userId, result });
+        res.status(200).json({ analysisId, ...result });
       } catch (error) {
         console.error("Failed to parse Python output:", stdout);
+        io.emit("analysis:error", {
+          analysisId,
+          userId,
+          error: error.message,
+        });
         res.status(500).json({
           error: "Failed to parse analysis results",
           details: error.message,
@@ -61,6 +88,7 @@ export const analyzeProject = async (req, res) => {
 
     pythonProcess.on("error", (error) => {
       console.error("Failed to start Python process:", error);
+      io.emit("analysis:error", { analysisId, userId, error: error.message });
       res.status(500).json({
         error: "Failed to start analysis",
         details: error.message,
@@ -104,18 +132,35 @@ export const analyzeUploadedFile = async (req, res) => {
       fs.mkdirSync(nodeModulesDir, { recursive: true });
     }
 
+    const analysisId =
+      req.body?.analysisId && req.body.analysisId !== ""
+        ? req.body.analysisId
+        : crypto.randomUUID();
+    const userId = req.user?._id?.toString();
+
     const scriptPath = path.join(__dirname, "../../scanner_predictor.py");
     const pythonProcess = spawn(PYTHON_CMD, [scriptPath, tempProjectDir]);
+
+    io.emit("analysis:start", {
+      analysisId,
+      userId,
+      projectPath: tempProjectDir,
+      source: "upload",
+    });
 
     let stdout = "";
     let stderr = "";
 
     pythonProcess.stdout.on("data", (data) => {
-      stdout += data.toString();
+      const chunk = data.toString();
+      stdout += chunk;
+      io.emit("analysis:log", { analysisId, userId, chunk, stream: "stdout" });
     });
 
     pythonProcess.stderr.on("data", (data) => {
-      stderr += data.toString();
+      const chunk = data.toString();
+      stderr += chunk;
+      io.emit("analysis:log", { analysisId, userId, chunk, stream: "stderr" });
     });
 
     pythonProcess.on("close", (code) => {
@@ -128,6 +173,11 @@ export const analyzeUploadedFile = async (req, res) => {
 
       if (code !== 0) {
         console.error("Python stderr:", stderr);
+        io.emit("analysis:error", {
+          analysisId,
+          userId,
+          error: stderr || "Analysis failed",
+        });
         return res.status(500).json({
           error: "Analysis failed",
           details: stderr,
@@ -136,9 +186,15 @@ export const analyzeUploadedFile = async (req, res) => {
 
       try {
         const result = JSON.parse(stdout);
-        res.status(200).json(result);
+        io.emit("analysis:complete", { analysisId, userId, result });
+        res.status(200).json({ analysisId, ...result });
       } catch (error) {
         console.error("Failed to parse Python output:", stdout);
+        io.emit("analysis:error", {
+          analysisId,
+          userId,
+          error: error.message,
+        });
         res.status(500).json({
           error: "Failed to parse analysis results",
           details: error.message,
@@ -155,6 +211,7 @@ export const analyzeUploadedFile = async (req, res) => {
       }
 
       console.error("Failed to start Python process:", error);
+      io.emit("analysis:error", { analysisId, userId, error: error.message });
       res.status(500).json({
         error: "Failed to start analysis",
         details: error.message,
