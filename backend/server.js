@@ -5,6 +5,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import { app, server } from "./socket/socket.js";
+import connectDB from "./db/db.js";
 import authRoutes from "./routes/auth.routes.js";
 
 dotenv.config();
@@ -12,6 +13,9 @@ dotenv.config();
 const port = process.env.PORT || 5000;
 
 const __dirname = path.resolve();
+
+// Connect to MongoDB
+connectDB();
 
 // CORS configuration
 app.use(
@@ -26,7 +30,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// API Routes
+// Routes
 app.use("/api/auth", authRoutes);
 
 // Serve static files in production
