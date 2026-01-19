@@ -181,10 +181,38 @@ class SandboxRunner:
             }
         }
     
+    def scan_obfuscation(self):
+        """Scan package for code obfuscation before execution"""
+        try:
+            result = subprocess.run(
+                ['python', '/sandbox/obfuscation_detector.py', str(self.package_path)],
+                capture_output=True,
+                timeout=10,
+                text=True
+            )
+            
+            if result.returncode == 0 and result.stdout:
+                obf_data = json.loads(result.stdout)
+                
+                # Save obfuscation report
+                obf_file = self.results_dir / f'{self.execution_id}_obfuscation.json'
+                with open(obf_file, 'w') as f:
+                    json.dump(obf_data, f, indent=2)
+                
+                print(f"[Sandbox] Obfuscation scan: {obf_data['obfuscation_score']}/100 ({obf_data['threat_level']})")
+                return obf_data
+        except Exception as e:
+            print(f"[Sandbox] Obfuscation scan failed: {e}")
+        
+        return None
+    
     def execute(self):
         """Main execution flow with monitoring"""
         print(f"[Sandbox] Starting execution: {self.execution_id}")
         start_time = time.time()
+        
+        # Scan for obfuscation before execution
+        obfuscation_result = self.scan_obfuscation()
         
         # Start monitors
         monitors = self.setup_monitoring()

@@ -27,6 +27,7 @@ COPY network_monitor.py /sandbox/
 COPY file_monitor.py /sandbox/
 COPY sandbox_runner.py /sandbox/
 COPY behavior_analyzer.py /sandbox/
+COPY obfuscation_detector.py /sandbox/
 
 # Set working directory
 WORKDIR /sandbox

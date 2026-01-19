@@ -29,6 +29,9 @@ class BehaviorAnalyzer:
         self.file_data = self.load_json(
             self.logs_dir / f'{execution_id}_files.json'
         )
+        self.obfuscation_data = self.load_json(
+            self.results_dir / f'{execution_id}_obfuscation.json'
+        )
     
     def load_json(self, file_path):
         """Load JSON file, return {} if not found"""
@@ -37,6 +40,60 @@ class BehaviorAnalyzer:
                 return json.load(f)
         except:
             return {}
+    
+    def analyze_obfuscation(self) -> Dict:
+        """Analyze code obfuscation"""
+        if not self.obfuscation_data:
+            return {'risk_score': 0, 'findings': []}
+        
+        findings = []
+        score = self.obfuscation_data.get('obfuscation_score', 0)
+        
+        # Add finding based on obfuscation level
+        if score >= 70:
+            findings.append({
+                'severity': 'critical',
+                'type': 'code_obfuscation',
+                'message': f'Heavily obfuscated code detected (score: {score}/100)',
+                'details': self.obfuscation_data.get('verdict', 'Heavily obfuscated')
+            })
+        elif score >= 40:
+            findings.append({
+                'severity': 'high',
+                'type': 'code_obfuscation',
+                'message': f'Moderate code obfuscation detected (score: {score}/100)',
+                'details': self.obfuscation_data.get('verdict', 'Moderately obfuscated')
+            })
+        elif score >= 20:
+            findings.append({
+                'severity': 'medium',
+                'type': 'code_obfuscation',
+                'message': f'Some code obfuscation detected (score: {score}/100)',
+                'details': self.obfuscation_data.get('verdict', 'Some obfuscation')
+            })
+        
+        # Add specific obfuscation techniques found
+        obf_findings = self.obfuscation_data.get('findings', [])
+        if obf_findings:
+            technique_summary = {}
+            for f in obf_findings:
+                tech_type = f.get('type', 'unknown')
+                if tech_type not in technique_summary:
+                    technique_summary[tech_type] = {'count': 0, 'severity': f.get('severity', 'low')}
+                technique_summary[tech_type]['count'] += f.get('count', 1)
+            
+            findings.append({
+                'severity': 'high',
+                'type': 'obfuscation_techniques',
+                'message': f'Found {len(obf_findings)} obfuscation patterns',
+                'details': technique_summary
+            })
+        
+        return {
+            'risk_score': min(score, 50),  # Cap obfuscation contribution at 50
+            'findings': findings,
+            'obfuscation_score': score
+        }
     
     def analyze_network_behavior(self) -> Dict:
         """Analyze network activity for threats"""
@@ -266,6 +323,9 @@ class BehaviorAnalyzer:
         # Specific recommendations based on findings
         finding_types = {f['type'] for f in all_findings}
         
+        if 'code_obfuscation' in finding_types:
+            recommendations.append('🔍 Code is obfuscated - inspect manually before use')
+        
         if 'suspicious_ip' in finding_types:
             recommendations.append('🌐 Investigate all external IP connections')
         
@@ -285,20 +345,24 @@ class BehaviorAnalyzer:
         network_analysis = self.analyze_network_behavior()
         file_analysis = self.analyze_file_behavior()
         execution_analysis = self.analyze_execution_behavior()
+        obfuscation_analysis = self.analyze_obfuscation()
         
-        # Calculate overall risk
+        # Calculate overall risk (include obfuscation)
         risk_score = self.calculate_overall_risk(
             network_analysis, 
             file_analysis, 
             execution_analysis
-        )
+        ) + obfuscation_analysis['risk_score']
+        risk_score = min(risk_score, 100)  # Cap at 100
+        
         threat_level = self.classify_threat_level(risk_score)
         
         # Compile all findings
         all_findings = (
             network_analysis['findings'] +
             file_analysis['findings'] +
-            execution_analysis['findings']
+            execution_analysis['findings'] +
+            obfuscation_analysis['findings']
         )
         
         # Sort by severity
