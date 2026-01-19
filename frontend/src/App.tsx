@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "sonner";
 import SignupPage from "@/pages/SignupPage";
 import LoginPage from "@/pages/LoginPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
@@ -15,6 +16,7 @@ function App() {
                     element={<ForgotPasswordPage />}
                 />
             </Routes>
+            <Toaster richColors position="top-right" />
         </BrowserRouter>
     );
 }
