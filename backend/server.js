@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import { app, server } from "./socket/socket.js";
 import connectDB from "./db/db.js";
 import authRoutes from "./routes/auth.routes.js";
+import packageRoutes from "./routes/package.routes.js";
 
 dotenv.config();
 
@@ -32,6 +33,7 @@ app.use(cookieParser());
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/packages", packageRoutes);
 
 // Serve static files in production
 app.use(express.static(path.join(__dirname, "/frontend/dist")));
