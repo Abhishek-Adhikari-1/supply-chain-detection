@@ -28,7 +28,12 @@ export const analyzeProject = async (req, res) => {
     }
 
     const scriptPath = path.join(__dirname, "../../scanner_predictor.py");
-    const resolvedProjectPath = path.resolve(projectPath);
+    
+    // Resolve path relative to project root (not backend directory)
+    const projectRoot = path.join(__dirname, "../..");
+    const resolvedProjectPath = path.isAbsolute(projectPath)
+      ? projectPath
+      : path.join(projectRoot, projectPath);
 
     const pythonProcess = spawn(PYTHON_CMD, [scriptPath, resolvedProjectPath]);
 

@@ -581,34 +581,74 @@ def predict_rows(rows: List[Dict], threshold_safe=0.35, threshold_mal=0.65) -> L
 # ---------------- main scan pipeline ----------------
 def scan_project(project_dir: str) -> Tuple[List[Dict], Dict[str, float]]:
     project = Path(project_dir)
-
     rows: List[Dict] = []
 
-    # Deep scan installed npm
-    npm_installed = list_npm_installed(project)
-    for name, pkg_dir in npm_installed:
-        rows.append(build_npm_row(name, pkg_dir))
+    # Check if this is a standalone PACKAGE (has manifest but no node_modules/site-packages)
+    has_pkg_json = (project / "package.json").exists()
+    has_setup_py = (project / "setup.py").exists()
+    has_node_modules = (project / "node_modules").exists()
+    has_site_packages = (project / "site-packages").exists() or (project / "lib").exists()
+    
+    is_standalone_package = (has_pkg_json or has_setup_py) and not (has_node_modules or has_site_packages)
+    
+    # If it's a standalone package (source-only, no dependencies), analyze it directly
+    if is_standalone_package:
+        try:
+            import sys
+            sys.path.insert(0, str(Path(__file__).parent))
+            from unified_scanner import analyze_package
+            
+            result = analyze_package(str(project))
+            pkg_name = result.get('package_name', 'unknown')
+            
+            # Build a row from the unified_scanner result
+            row = {
+                'package_name': pkg_name,
+                'ecosystem': result.get('ecosystem', 'unknown'),
+                'version': result.get('version', 'unknown'),
+                'scan_depth': 'source',
+                'eval_usage': result['features'].get('eval_usage', 0),
+                'env_access': result['features'].get('env_var_access', 0),
+                'network_calls': result['features'].get('network_calls', 0),
+                'file_ops': result['features'].get('file_write_attempts', 0),
+                'obfuscation': result['features'].get('obfuscation_score', 0),
+                'backdoor_score': result['features'].get('backdoor_score', 0),
+                'is_npm': '1' if result.get('ecosystem') == 'npm' else '0',
+                'is_pypi': '1' if result.get('ecosystem') == 'pypi' else '0',
+            }
+            rows.append(row)
+        except Exception as e:
+            print(f"Error analyzing standalone package: {e}", file=sys.stderr)
+            # Fall through to normal scan if unified_scanner fails
+            pass
+    
+    # If not a standalone package, scan for installed dependencies (original logic)
+    if not rows:
+        # Deep scan installed npm
+        npm_installed = list_npm_installed(project)
+        for name, pkg_dir in npm_installed:
+            rows.append(build_npm_row(name, pkg_dir))
 
-    # Fallback npm declared deps
-    if not npm_installed:
-        for name in parse_package_json_deps(project):
-            rows.append(base_row(name, "npm"))
+        # Fallback npm declared deps
+        if not npm_installed:
+            for name in parse_package_json_deps(project):
+                rows.append(base_row(name, "npm"))
 
-    # Deep scan installed pypi
-    pypi_installed = list_pypi_installed(project)
-    for name, pkg_dir in pypi_installed:
-        rows.append(build_pypi_row(name, pkg_dir))
+        # Deep scan installed pypi
+        pypi_installed = list_pypi_installed(project)
+        for name, pkg_dir in pypi_installed:
+            rows.append(build_pypi_row(name, pkg_dir))
 
-    # Fallback pypi requirements/imports
-    if not pypi_installed:
-        reqs = parse_requirements_txt(project)
-        if reqs:
-            for name in reqs:
-                rows.append(base_row(name, "pypi"))
-        else:
-            imports = scan_python_imports(project)
-            for name in imports:
-                rows.append(base_row(name, "pypi"))
+        # Fallback pypi requirements/imports
+        if not pypi_installed:
+            reqs = parse_requirements_txt(project)
+            if reqs:
+                for name in reqs:
+                    rows.append(base_row(name, "pypi"))
+            else:
+                imports = scan_python_imports(project)
+                for name in imports:
+                    rows.append(base_row(name, "pypi"))
 
     # Project-wide scan (works for ANY upload)
     project_risks = scan_project_source_for_risks(project)
