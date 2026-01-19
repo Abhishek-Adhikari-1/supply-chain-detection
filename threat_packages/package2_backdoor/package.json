@@ -1,0 +1,15 @@
+{
+  "name": "util-common",
+  "version": "1.3.4",
+  "description": "Common utilities library - BACKDOOR DEMO VERSION",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["utils", "utilities", "helper"],
+  "author": "hacker@suspicious.dev",
+  "license": "MIT",
+  "dependencies": {
+    "net": "^1.0.0"
+  }
+}
