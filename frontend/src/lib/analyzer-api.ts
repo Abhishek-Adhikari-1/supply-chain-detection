@@ -1,6 +1,7 @@
-import { AnalysisResult } from "@/hooks/useAnalysis";
+import type { AnalysisResult } from "@/hooks/useAnalysis";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL =
+  (import.meta as any).env.VITE_API_URL || "http://localhost:5000";
 
 export const analyzerApi = {
   analyzeProject: async (projectPath: string): Promise<AnalysisResult> => {

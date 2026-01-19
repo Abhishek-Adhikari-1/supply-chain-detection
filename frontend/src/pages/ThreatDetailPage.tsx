@@ -1,6 +1,6 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useAnalysisStore, type PackageAnalysis } from "@/hooks/useAnalysis";
+import { useAnalysisStore } from "@/hooks/useAnalysis";
 import { useAuthStore } from "@/hooks/useAuth";
 import { useEffect } from "react";
 

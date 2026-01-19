@@ -83,7 +83,7 @@
 
 ## 📊 Current Test Results
 
-```
+```json
 Packages tested: 7
 
 Risk Assessment:

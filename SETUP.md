@@ -55,7 +55,7 @@ bash test_all.sh
 
 ## Architecture
 
-```
+```text
 Frontend (React) → Backend (Express) → AI/ML (Python) + Sandbox (Docker)
 ```
 

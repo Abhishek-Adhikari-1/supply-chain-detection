@@ -38,7 +38,8 @@ app.use("/api/analyze", analyzerRoutes);
 // Serve static files in production
 app.use(express.static(path.join(__dirname, "/frontend/dist")));
 
-app.get("*", (req, res) => {
+// SPA fallback - serve index.html for all non-API routes
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, "frontend", "dist", "index.html"));
 });
 
