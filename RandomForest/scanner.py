@@ -430,10 +430,10 @@ def show_result(pkg_info, violations, is_malicious, mal_prob, safe_prob):
     """Display analysis result with clear violations"""
     
     # Determine verdict
-    if is_malicious or mal_prob > 0.5:
+    if is_malicious or mal_prob > 0.3:
         verdict = "🚨 MALICIOUS"
         verdict_color = "CRITICAL"
-    elif len(violations) >= 3 or mal_prob > 0.3:
+    elif len(violations) >= 2 or mal_prob > 0.2:
         verdict = "⚠️ SUSPICIOUS"
         verdict_color = "HIGH"
     elif len(violations) >= 1:
