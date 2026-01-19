@@ -371,6 +371,27 @@ class BehaviorAnalyzer:
         
         # Generate recommendations
         recommendations = self.generate_recommendations(risk_score, all_findings)
+
+        # Prepare network activities for frontend
+        network_activities = []
+        for conn in self.network_data.get('connections', []):
+            try:
+                network_activities.append({
+                    'ip': conn.get('remote_ip', 'unknown'),
+                    'port': int(conn.get('remote_port', 0)),
+                    'timestamp': conn.get('timestamp', '')
+                })
+            except:
+                pass
+
+        # Prepare file operations for frontend
+        file_operations = []
+        for event in self.file_data.get('events', []):
+            file_operations.append({
+                'operation': event.get('type', 'unknown'),
+                'path': event.get('path', ''),
+                'timestamp': event.get('timestamp', '')
+            })
         
         # Compile report
         report = {
@@ -392,7 +413,9 @@ class BehaviorAnalyzer:
                 'execution': execution_analysis
             },
             'findings': all_findings,
-            'recommendations': recommendations
+            'recommendations': recommendations,
+            'network_activities': network_activities,
+            'file_operations': file_operations
         }
         
         # Save report
