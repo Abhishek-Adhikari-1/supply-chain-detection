@@ -62,7 +62,7 @@ PY_IMPORT_RE = re.compile(r"^\s*(?:from\s+([a-zA-Z0-9_\.]+)\s+import|import\s+([
 # PACKAGE EXTRACTION (for tar.gz, zip, etc.)
 # ════════════════════════════════════════════════════════════════════════════════
 
-def extract_tar_gz(tar_path: Path) -> Path:
+def extract_tar_gz(tar_path: Path) -> Path | None:
     """Extract .tar.gz archive and return extraction directory."""
     extract_dir = Path(tempfile.mkdtemp(prefix="pkg_tar_"))
     try:
@@ -73,7 +73,7 @@ def extract_tar_gz(tar_path: Path) -> Path:
         return None
 
 
-def extract_zip(zip_path: Path) -> Path:
+def extract_zip(zip_path: Path) -> Path | None:
     """Extract .zip archive and return extraction directory."""
     extract_dir = Path(tempfile.mkdtemp(prefix="pkg_zip_"))
     try:
@@ -84,7 +84,7 @@ def extract_zip(zip_path: Path) -> Path:
         return None
 
 
-def extract_packed_package(package_path: str) -> Tuple[Path, bool]:
+def extract_packed_package(package_path: str) -> Tuple[Path | None, bool]:
     """
     Extract packed package if needed, or return original path.
     Returns: (extracted_path_or_original, was_extracted)
@@ -465,7 +465,7 @@ def list_pypi_installed(project_dir: Path) -> List[Tuple[str, Path]]:
     return out
 
 # ---------------- feature row ----------------
-def base_row(package_name: str, ecosystem: str) -> Dict[str, float]:
+def base_row(package_name: str, ecosystem: str) -> Dict[str, Any]:
     """Initialize row with all 65 features matching trained model"""
     return {
         "package_name": package_name,
@@ -566,7 +566,7 @@ def base_row(package_name: str, ecosystem: str) -> Dict[str, float]:
         "scan_depth": "declared",
     }
 
-def build_npm_row(name: str, pkg_dir: Path) -> Dict[str, float]:
+def build_npm_row(name: str, pkg_dir: Path) -> Dict[str, Any]:
     row = base_row(name, "npm")
     row["scan_depth"] = "installed"
 
@@ -604,7 +604,7 @@ def build_npm_row(name: str, pkg_dir: Path) -> Dict[str, float]:
 
     return row
 
-def build_pypi_row(name: str, pkg_dir: Path) -> Dict[str, float]:
+def build_pypi_row(name: str, pkg_dir: Path) -> Dict[str, Any]:
     row = base_row(name, "pypi")
     row["scan_depth"] = "installed"
 
@@ -833,7 +833,7 @@ def scan_and_predict(project_dir: str) -> Dict:
     # Try to extract if it's a packed package
     try:
         extracted_path, was_extracted = extract_packed_package(project_dir)
-        project_to_scan = extracted_path
+        project_to_scan = extracted_path if extracted_path else Path(project_dir)
     except Exception as e:
         # Fall back to original path if extraction fails
         project_to_scan = Path(project_dir)
