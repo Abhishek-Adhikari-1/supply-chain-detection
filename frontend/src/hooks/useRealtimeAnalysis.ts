@@ -22,10 +22,10 @@ export function useRealtimeAnalysis() {
       auth: { userId: user._id },
     });
 
-    const shouldHandle = (payload) =>
+    const shouldHandle = (payload: any) =>
       !payload?.userId || payload.userId === user._id;
 
-    const matchesCurrent = (payload) => {
+    const matchesCurrent = (payload: any) => {
       const currentId = useAnalysisStore.getState().activeAnalysisId;
       return (
         !payload?.analysisId || !currentId || payload.analysisId === currentId
@@ -53,7 +53,7 @@ export function useRealtimeAnalysis() {
       });
     });
 
-    socket.on("analysis:log", (payload) => {
+  socket.on("analysis:log", (payload: any) => {
       if (!shouldHandle(payload) || !matchesCurrent(payload)) return;
       if (!payload?.chunk) return;
       addLog({ message: payload.chunk, stream: payload.stream || "stdout" });

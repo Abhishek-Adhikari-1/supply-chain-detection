@@ -8,10 +8,15 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
+import tempfile
+import tarfile
+import zipfile
+import warnings
+warnings.filterwarnings('ignore')
 
 # Resolve paths relative to this script's directory
 SCRIPT_DIR = Path(__file__).parent.resolve()
-MODEL_PATH = SCRIPT_DIR / "malicious_package_detector.pkl"
+MODEL_PATH = SCRIPT_DIR / "security_model.pkl"  # Updated to new model
 FEATURE_COLS_PATH = SCRIPT_DIR / "feature_cols.json"
 
 # ---------------- Patterns ----------------
@@ -38,7 +43,66 @@ BACKDOOR_HINTS = ["reverse shell", "nc -e", "bash -i", "bind shell", "socket.con
 
 PY_IMPORT_RE = re.compile(r"^\s*(?:from\s+([a-zA-Z0-9_\.]+)\s+import|import\s+([a-zA-Z0-9_\.]+))")
 
-# ---------------- Snapshot cache ----------------
+# ════════════════════════════════════════════════════════════════════════════════
+# PACKAGE EXTRACTION (for tar.gz, zip, etc.)
+# ════════════════════════════════════════════════════════════════════════════════
+
+def extract_tar_gz(tar_path: Path) -> Path:
+    """Extract .tar.gz archive and return extraction directory."""
+    extract_dir = Path(tempfile.mkdtemp(prefix="pkg_tar_"))
+    try:
+        with tarfile.open(tar_path, 'r:gz') as tar:
+            tar.extractall(path=extract_dir)
+        return extract_dir
+    except Exception as e:
+        return None
+
+
+def extract_zip(zip_path: Path) -> Path:
+    """Extract .zip archive and return extraction directory."""
+    extract_dir = Path(tempfile.mkdtemp(prefix="pkg_zip_"))
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            zf.extractall(path=extract_dir)
+        return extract_dir
+    except Exception as e:
+        return None
+
+
+def extract_packed_package(package_path: str) -> Tuple[Path, bool]:
+    """
+    Extract packed package if needed, or return original path.
+    Returns: (extracted_path_or_original, was_extracted)
+    """
+    path = Path(package_path)
+    
+    if not path.exists():
+        raise FileNotFoundError(f"Package not found: {package_path}")
+    
+    # If it's a directory, return as-is
+    if path.is_dir():
+        return path, False
+    
+    # Extract based on file extension
+    if path.suffix == '.gz' or path.name.endswith('.tar.gz'):
+        extracted = extract_tar_gz(path)
+    elif path.suffix == '.zip':
+        extracted = extract_zip(path)
+    elif path.suffix == '.tgz':
+        extracted = extract_tar_gz(path)
+    else:
+        # Assume it's a directory or try to handle it
+        return path, False
+    
+    if extracted is None:
+        raise RuntimeError(f"Failed to extract {package_path}")
+    
+    return extracted, True
+
+
+# ════════════════════════════════════════════════════════════════════════════════
+# SNAPSHOT CACHE
+# ════════════════════════════════════════════════════════════════════════════════
 CACHE_DIR = Path(".pkg_snapshots")
 CACHE_DIR.mkdir(exist_ok=True)
 
@@ -458,8 +522,11 @@ def predict_rows(rows: List[Dict], threshold_safe=0.35, threshold_mal=0.65) -> L
     art = load_model()
     model = art["model"]
     scaler = art["scaler"]
-    feature_cols = art["feature_cols"]
+    feature_cols = art.get("feature_cols") or art.get("feature_columns", [])
     explanations = art.get("feature_explanations", {})
+
+    if not rows:
+        return []
 
     df = pd.DataFrame(rows)
     df = encode_ecosystem(df)
@@ -548,33 +615,51 @@ def scan_project(project_dir: str) -> Tuple[List[Dict], Dict[str, float]]:
     return rows, project_risks
 
 def scan_and_predict(project_dir: str) -> Dict:
-    rows, project_risks = scan_project(project_dir)
+    # Try to extract if it's a packed package
+    try:
+        extracted_path, was_extracted = extract_packed_package(project_dir)
+        project_to_scan = extracted_path
+    except Exception as e:
+        # Fall back to original path if extraction fails
+        project_to_scan = Path(project_dir)
+        was_extracted = False
+    
+    try:
+        rows, project_risks = scan_project(str(project_to_scan))
 
-    # If we only had declared deps, apply project-level risk signals to them
-    # (so ML gets some non-zero signals even when packages aren't installed)
-    if project_risks:
-        for r in rows:
-            if r.get("scan_depth") == "declared":
-                for k, v in project_risks.items():
-                    # only fill if currently 0
-                    if k in r and (r[k] == 0 or r[k] == 0.0):
-                        r[k] = v
+        # If we only had declared deps, apply project-level risk signals to them
+        # (so ML gets some non-zero signals even when packages aren't installed)
+        if project_risks:
+            for r in rows:
+                if r.get("scan_depth") == "declared":
+                    for k, v in project_risks.items():
+                        # only fill if currently 0
+                        if k in r and (r[k] == 0 or r[k] == 0.0):
+                            r[k] = v
 
-    results = predict_rows(rows)
+        results = predict_rows(rows)
 
-    summary = {
-        "SAFE": sum(1 for r in results if r["label"] == "SAFE"),
-        "SUSPICIOUS": sum(1 for r in results if r["label"] == "SUSPICIOUS"),
-        "MALICIOUS": sum(1 for r in results if r["label"] == "MALICIOUS"),
-    }
+        summary = {
+            "SAFE": sum(1 for r in results if r["label"] == "SAFE"),
+            "SUSPICIOUS": sum(1 for r in results if r["label"] == "SUSPICIOUS"),
+            "MALICIOUS": sum(1 for r in results if r["label"] == "MALICIOUS"),
+        }
 
-    return {
-        "project_dir": str(project_dir),
-        "packages_scanned": len(results),
-        "summary": summary,
-        "project_risk_signals": project_risks,
-        "results": results
-    }
+        return {
+            "project_dir": str(project_dir),
+            "packages_scanned": len(results),
+            "summary": summary,
+            "project_risk_signals": project_risks,
+            "results": results
+        }
+    finally:
+        # Clean up temp extraction if needed
+        if was_extracted:
+            import shutil
+            try:
+                shutil.rmtree(project_to_scan)
+            except:
+                pass
 
 if __name__ == "__main__":
     import sys
