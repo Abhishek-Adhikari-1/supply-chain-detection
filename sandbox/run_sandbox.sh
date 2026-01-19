@@ -60,6 +60,9 @@ RESULTS_DIR="$SCRIPT_DIR/results"
 LOGS_DIR="$SCRIPT_DIR/logs"
 mkdir -p "$RESULTS_DIR" "$LOGS_DIR"
 
+# Set permissions to allow container user to write
+chmod 777 "$RESULTS_DIR" "$LOGS_DIR"
+
 echo -e "${YELLOW}Starting sandbox container...${NC}"
 
 # Run sandbox container
@@ -89,10 +92,10 @@ fi
 
 EXECUTION_ID=$(basename "$LATEST_RESULT" | sed 's/_result.json//')
 
-# Run behavior analysis in a new container
+# Run behavior analysis in a new container (needs write access to save analysis)
 docker run \
     --rm \
-    -v "$RESULTS_DIR:/sandbox/results:ro" \
+    -v "$RESULTS_DIR:/sandbox/results:rw" \
     -v "$LOGS_DIR:/sandbox/logs:ro" \
     "$IMAGE_NAME" \
     python /sandbox/behavior_analyzer.py "$EXECUTION_ID"

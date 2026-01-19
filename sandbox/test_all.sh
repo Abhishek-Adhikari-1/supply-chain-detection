@@ -19,18 +19,18 @@ echo -e "${BLUE}========================================${NC}\n"
 echo -e "${YELLOW}Testing npm packages...${NC}\n"
 
 echo -e "${GREEN}1. Testing auth-helper${NC}"
-"$SCRIPT_DIR/run_sandbox.sh" sus_packages/auth-helper npm 30
+"$SCRIPT_DIR/run_sandbox.sh" sus_packages/auth-helper npm 300
 echo ""
 
 echo -e "${GREEN}2. Testing crypto-miner${NC}"
-"$SCRIPT_DIR/run_sandbox.sh" sus_packages/crypto-miner npm 30
+"$SCRIPT_DIR/run_sandbox.sh" sus_packages/crypto-miner npm 300
 echo ""
 
 # Test Python packages
 echo -e "${YELLOW}Testing Python packages...${NC}\n"
 
 echo -e "${GREEN}3. Testing py_backdoor${NC}"
-"$SCRIPT_DIR/run_sandbox.sh" sus_packages/py_backdoor pypi 30
+"$SCRIPT_DIR/run_sandbox.sh" sus_packages/py_backdoor pypi 300
 echo ""
 
 echo -e "\n${BLUE}========================================${NC}"

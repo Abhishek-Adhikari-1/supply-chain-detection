@@ -136,7 +136,7 @@ class BehaviorAnalyzer:
         }
     
     def analyze_execution_behavior(self) -> Dict:
-        """Analyze execution results for anomalies"""
+        """Analyze execution results for anomalies and suspicious stdout patterns"""
         if not self.execution_data:
             return {'risk_score': 0, 'findings': []}
         
@@ -144,6 +144,51 @@ class BehaviorAnalyzer:
         risk_score = 0
         
         execution = self.execution_data.get('execution', {})
+        run_result = execution.get('run', {})
+        
+        # Analyze stdout for malicious indicators
+        stdout = run_result.get('stdout', '')
+        if stdout:
+            # Check for data exfiltration mentions
+            if any(keyword in stdout.lower() for keyword in [
+                'exfiltrat', 'steal', 'credential', 'malicious', 'backdoor',
+                'ssh key', 'environment variable', 'password', 'token'
+            ]):
+                findings.append({
+                    'severity': 'critical',
+                    'type': 'malicious_output',
+                    'message': 'Suspicious activity detected in output',
+                    'details': 'Code mentions stealing credentials or exfiltrating data'
+                })
+                risk_score += 35
+            
+            # Check for suspicious IP patterns
+            import re
+            ip_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
+            ips_found = re.findall(ip_pattern, stdout)
+            if ips_found:
+                suspicious_ips = [ip for ip in ips_found if not ip.startswith('127.') and not ip.startswith('0.')]
+                if suspicious_ips:
+                    findings.append({
+                        'severity': 'critical',
+                        'type': 'suspicious_ip_in_output',
+                        'message': f'Found suspicious IPs in output: {", ".join(suspicious_ips)}',
+                        'details': suspicious_ips
+                    })
+                    risk_score += 30
+            
+            # Check for file system manipulation
+            if any(keyword in stdout.lower() for keyword in [
+                'writefilesync', 'unlinkSync', 'rm -rf', 'file written',
+                'data exfiltrated to:', '/tmp/', '.ssh', '.env'
+            ]):
+                findings.append({
+                    'severity': 'high',
+                    'type': 'file_manipulation',
+                    'message': 'File system manipulation detected',
+                    'details': 'Code writes or deletes files'
+                })
+                risk_score += 20
         
         # Check for errors that might indicate malicious code
         if 'error' in execution:
@@ -166,7 +211,6 @@ class BehaviorAnalyzer:
             risk_score += 15
         
         # Check stderr for suspicious output
-        run_result = execution.get('run', {})
         stderr = run_result.get('stderr', '')
         if stderr and len(stderr) > 100:
             findings.append({
@@ -178,8 +222,9 @@ class BehaviorAnalyzer:
             risk_score += 5
         
         return {
-            'risk_score': min(risk_score, 20),
-            'findings': findings
+            'risk_score': min(risk_score, 100),
+            'findings': findings,
+            'stdout_analyzed': bool(stdout)
         }
     
     def calculate_overall_risk(self, network_analysis, file_analysis, execution_analysis) -> int:

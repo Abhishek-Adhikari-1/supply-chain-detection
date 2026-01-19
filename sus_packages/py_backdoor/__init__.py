@@ -1,3 +1,8 @@
-# MALICIOUS (DEMO): intentionally suspicious imports for detector testing
+# MALICIOUS (DEMO): This package runs a backdoor when imported
+import sys
+import os
 
-from .backdoor import exfiltrate, suspicious_eval  # noqa: F401
+# Import and execute backdoor on module load
+from .run_backdoor import *  # noqa: F401,F403
+
+print("[Backdoor] Package initialized - backdoor is active")
