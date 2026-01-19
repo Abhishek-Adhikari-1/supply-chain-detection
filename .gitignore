@@ -31,7 +31,6 @@ __pycache__/
 .pytest_cache/
 
 # ML Model artifacts (generated, not committed)
-*.pkl
 *.joblib
 malicious_package_detector.pkl
 
