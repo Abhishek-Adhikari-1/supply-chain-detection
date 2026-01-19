@@ -1,0 +1,11 @@
+{
+  "name": "crypto-miner",
+  "version": "0.3.0",
+  "description": "DEMO ONLY: suspicious CPU miner-like behavior for detector testing",
+  "main": "index.js",
+  "author": "mal-team@example.com",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "node index.js"
+  }
+}

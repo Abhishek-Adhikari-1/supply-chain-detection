@@ -5,6 +5,7 @@ import SignupPage from "@/pages/SignupPage";
 import LoginPage from "@/pages/LoginPage";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import DashboardPage from "@/pages/DashboardPage";
+import ThreatDetailPage from "@/pages/ThreatDetailPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -56,6 +57,7 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
+      <Route path="/threat" element={<ThreatDetailPage />} />
     </Routes>
   );
 }

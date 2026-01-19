@@ -8,6 +8,7 @@ import { app, server } from "./socket/socket.js";
 import connectDB from "./db/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import packageRoutes from "./routes/package.routes.js";
+import analyzerRoutes from "./routes/analyzer.routes.js";
 
 dotenv.config();
 
@@ -34,11 +35,13 @@ app.use(cookieParser());
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/packages", packageRoutes);
+app.use("/api/analyze", analyzerRoutes);
 
 // Serve static files in production
 app.use(express.static(path.join(__dirname, "/frontend/dist")));
 
-app.get("{*path}", (req, res) => {
+// SPA fallback - serve index.html for all non-API routes
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, "frontend", "dist", "index.html"));
 });
 

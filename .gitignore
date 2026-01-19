@@ -1,84 +1,92 @@
-# ----------- GITIGNORE FOR VITE PROJECT -----------
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# ----------- GITIGNORE FOR NODE PROJECT -----------
-# dotenv environment variables file
-.env
-.env*.local
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.log
-
-# Build products
-dist
-out
-build
-*.js.map
-*.cjs.map
-*.mjs.map
-
-# Dependency directories
+# Node
 node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+.vite/
 
-# Optional npm cache directory
-.npm/
-
-# Optional eslint cache
-.eslintcache
-
-# Optional REPL history
-.node_repl_history
-
-# Yarn Integrity file
-.yarn-integrity
-
-# dotenv environment variables file
+# Environment variables
 .env
-.env*.local
+.env.local
+.env.*.local
 
-# parcel-bundler cache (parcel/parcel#872)
-.cache
-.parcel-cache
-
-# Cypress
-cypress/videos/
-cypress/screenshots/
-
-# JetBrains IDEs
+# IDE
+.vscode/
 .idea/
-*.iml
-*.iws
-*.ipr
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ML Model artifacts (generated, not committed)
+*.pkl
+*.joblib
+malicious_package_detector.pkl
+
+# Sandbox
+sandbox/.pkg_snapshots/
+sandbox/results/
+sandbox/logs/
+
+# Analysis temp
+temp/
+.analysis/
+
+# VS Code
+.vscode/
 
 # Mac
 .DS_Store
 
-# Windows
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Temp analysis and model files
+/temp/analysis/
+/ai/*.pkl
+/ai/*.joblib
+
+# Suspect packages (test malware)
+sus_packages/*/dist/
+sus_packages/*/node_modules/
+sus_packages/*/*.egg-info/
+sus_packages/*/__pycache__/
+
+# Env files
+.env
+
+# SQLite DB
+*.sqlite
+*.sqlite3
+
+# Redis dump
+dump.rdb
+
+# OS generated files
 Thumbs.db
 ehthumbs.db
+Desktop.ini
+
+# Logs
+*.log
+
+# Misc
+*.bak
+*.swp
+*.swo
+*~
+.github/*
+sandbox/logs/**
+sandbox/results/**

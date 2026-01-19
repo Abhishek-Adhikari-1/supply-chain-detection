@@ -1,0 +1,19 @@
+{
+  "name": "package3-cryptominer",
+  "version": "1.0.0",
+  "description": "Cryptominer malicious package - EDUCATIONAL DEMO",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "crypto",
+    "encryption",
+    "security"
+  ],
+  "author": "miner@cryptofarm.ru",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "os": "^0.1.2"
+  }
+}
