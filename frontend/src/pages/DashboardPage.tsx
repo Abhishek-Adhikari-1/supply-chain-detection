@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/hooks/useAuth";
 import { useAnalysisStore } from "@/hooks/useAnalysis";
-import { analyzerApi } from "@/lib/analyzer-api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
