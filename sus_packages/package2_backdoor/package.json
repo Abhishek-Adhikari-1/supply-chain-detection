@@ -1,0 +1,19 @@
+{
+  "name": "package2-backdoor",
+  "version": "1.0.0",
+  "description": "Backdoor malicious package - EDUCATIONAL DEMO",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "utils",
+    "utilities",
+    "helper"
+  ],
+  "author": "hacker@suspicious.dev",
+  "license": "MIT",
+  "dependencies": {
+    "net": "^1.0.0"
+  }
+}

