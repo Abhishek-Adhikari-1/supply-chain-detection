@@ -7,6 +7,8 @@ import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import DashboardPage from "@/pages/DashboardPage";
 import ThreatDetailPage from "@/pages/ThreatDetailPage";
 import LandingPage from "@/pages/LandingPage";
+import HistoryPage from "@/pages/HistoryPage";
+import ComparePage from "@/pages/ComparePage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -50,6 +52,22 @@ function AppContent() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/history"
+        element={
+          <ProtectedRoute>
+            <HistoryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/compare"
+        element={
+          <ProtectedRoute>
+            <ComparePage />
           </ProtectedRoute>
         }
       />

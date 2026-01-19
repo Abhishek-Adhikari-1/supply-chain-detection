@@ -184,11 +184,44 @@ export const getHistory = async (req, res) => {
   try {
     const scans = await Scan.find({ userId: req.user._id })
       .sort({ createdAt: -1 })
-      .limit(50);
+      .limit(100);
+
+    // Format the history data for frontend consumption
+    const history = scans.map((scan) => {
+      const firstResult = scan.results?.[0] || {};
+      const totalIssues =
+        scan.results?.reduce((sum, r) => sum + (r.issues?.length || 0), 0) || 0;
+      const avgRiskScore =
+        scan.results?.length > 0
+          ? Math.round(
+              scan.results.reduce((sum, r) => sum + (r.riskScore || 0), 0) /
+                scan.results.length,
+            )
+          : 0;
+      const highestRiskLevel =
+        scan.results?.reduce((highest, r) => {
+          const levels = ["low", "medium", "high", "critical"];
+          const currentLevel = levels.indexOf(r.riskLevel || "low");
+          const highestLevel = levels.indexOf(highest);
+          return currentLevel > highestLevel ? r.riskLevel : highest;
+        }, "low") || "low";
+
+      return {
+        _id: scan._id,
+        packageName: scan.packageName || scan.projectPath || "Unknown",
+        projectPath: scan.projectPath,
+        riskScore: avgRiskScore,
+        riskLevel: highestRiskLevel,
+        issuesCount: totalIssues,
+        scannedAt: scan.createdAt,
+        scanType: scan.scanType === "name" ? "package" : scan.scanType,
+        results: scan.results,
+      };
+    });
 
     res.status(200).json({
       success: true,
-      scans,
+      history,
     });
   } catch (error) {
     console.error("Error in getHistory:", error.message);

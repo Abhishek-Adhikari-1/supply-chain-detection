@@ -2,12 +2,16 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { Link } from "react-router-dom";
 import axios from "axios";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRealtimeAnalysis } from "@/hooks/useRealtimeAnalysis";
 import { useAnalysisStore } from "@/hooks/useAnalysis";
 import { analyzerApi } from "@/lib/analyzer-api";
+import { TourGuide } from "@/components/TourGuide";
+import { ShortcutsModal } from "@/components/ShortcutsModal";
+import { useTourStore } from "@/store/useTourStore";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -69,8 +73,19 @@ export default function DashboardPage() {
   const [projectPath, setProjectPath] = useState("");
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [mousePosition, setMousePosition] = useState({ x: 50, y: 50 });
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  const { startTour, hasCompletedTour } = useTourStore();
 
   useRealtimeAnalysis();
+
+  // Show tour on first visit
+  useEffect(() => {
+    if (!hasCompletedTour) {
+      const timer = setTimeout(() => startTour(), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [hasCompletedTour, startTour]);
 
   // Generate stable positions for floating particles
   const floatingParticles = useMemo(
@@ -117,8 +132,22 @@ export default function DashboardPage() {
         },
       );
       setScanResults(response.data.results);
+      if (
+        response.data.results.some(
+          (r: ScanResult) => r.riskLevel === "critical",
+        )
+      ) {
+        toast.error("Critical threats detected!", {
+          description: "Review your scan results immediately.",
+        });
+      } else {
+        toast.success("Scan completed successfully!");
+      }
     } catch (err: any) {
       setScanError(err.response?.data?.error || "Failed to scan file");
+      toast.error("Scan failed", {
+        description: err.response?.data?.error || "Failed to scan file",
+      });
     } finally {
       setIsScanning(false);
     }
@@ -146,8 +175,22 @@ export default function DashboardPage() {
         { withCredentials: true },
       );
       setScanResults(response.data.results);
+      if (
+        response.data.results.some(
+          (r: ScanResult) => r.riskLevel === "critical",
+        )
+      ) {
+        toast.error("Critical threats detected!", {
+          description: "Review your scan results immediately.",
+        });
+      } else {
+        toast.success("Package scan completed!");
+      }
     } catch (err: any) {
       setScanError(err.response?.data?.error || "Failed to scan package");
+      toast.error("Scan failed", {
+        description: err.response?.data?.error || "Failed to scan package",
+      });
     } finally {
       setIsScanning(false);
     }
@@ -219,6 +262,91 @@ export default function DashboardPage() {
     }
   };
 
+  const exportResults = (format: "json" | "csv") => {
+    if (scanResults.length === 0) {
+      toast.error("No results to export");
+      return;
+    }
+
+    if (format === "json") {
+      const dataStr = JSON.stringify(scanResults, null, 2);
+      const dataUri =
+        "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
+      const exportFileDefaultName = `scan-results-${new Date().toISOString().split("T")[0]}.json`;
+
+      const linkElement = document.createElement("a");
+      linkElement.setAttribute("href", dataUri);
+      linkElement.setAttribute("download", exportFileDefaultName);
+      linkElement.click();
+      toast.success("Exported as JSON");
+    } else if (format === "csv") {
+      const headers = [
+        "Package",
+        "Version",
+        "Risk Level",
+        "Risk Score",
+        "Issues",
+      ];
+      const rows = scanResults.map((r) => [
+        r.package,
+        r.version || "N/A",
+        r.riskLevel,
+        r.riskScore,
+        r.issues.join("; "),
+      ]);
+
+      const csvContent = [
+        headers.join(","),
+        ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
+      ].join("\n");
+
+      const dataUri =
+        "data:text/csv;charset=utf-8," + encodeURIComponent(csvContent);
+      const exportFileDefaultName = `scan-results-${new Date().toISOString().split("T")[0]}.csv`;
+
+      const linkElement = document.createElement("a");
+      linkElement.setAttribute("href", dataUri);
+      linkElement.setAttribute("download", exportFileDefaultName);
+      linkElement.click();
+      toast.success("Exported as CSV");
+    }
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + K for quick search
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        document
+          .querySelector<HTMLInputElement>('input[placeholder*="Search"]')
+          ?.focus();
+      }
+      // Ctrl/Cmd + E for export
+      if ((e.ctrlKey || e.metaKey) && e.key === "e" && scanResults.length > 0) {
+        e.preventDefault();
+        exportResults("json");
+      }
+      // Ctrl/Cmd + H for history
+      if ((e.ctrlKey || e.metaKey) && e.key === "h") {
+        e.preventDefault();
+        window.location.href = "/history";
+      }
+      // Ctrl/Cmd + ? for shortcuts modal
+      if ((e.ctrlKey || e.metaKey) && e.key === "/") {
+        e.preventDefault();
+        setShowShortcuts(true);
+      }
+      // Escape to close shortcuts modal
+      if (e.key === "Escape") {
+        setShowShortcuts(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [scanResults]);
+
   const summaryTotals = analysisResults?.summary ?? {
     SAFE: 0,
     SUSPICIOUS: 0,
@@ -259,6 +387,71 @@ export default function DashboardPage() {
             </h1>
           </Link>
           <div className="flex items-center gap-4">
+            <Link to="/compare" data-tour="compare">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hover:bg-primary/10 transition-all duration-300"
+              >
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                  />
+                </svg>
+                Compare
+              </Button>
+            </Link>
+            <Link to="/history" data-tour="history">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hover:bg-primary/10 transition-all duration-300"
+              >
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                History
+              </Button>
+            </Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowShortcuts(true)}
+              className="hover:bg-primary/10 transition-all duration-300"
+              title="Keyboard Shortcuts (Ctrl+/)"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </Button>
             <span className="text-sm text-muted-foreground">
               Welcome,{" "}
               <span className="font-medium text-foreground">{user?.name}</span>
@@ -301,6 +494,7 @@ export default function DashboardPage() {
           <div
             className="border border-border/50 rounded-2xl p-6 space-y-4 bg-card/50 backdrop-blur-sm animate-fade-up hover:border-primary/30 transition-all duration-500 hover:shadow-lg hover:shadow-primary/5"
             style={{ animationDelay: "0.1s" }}
+            data-tour="analyze"
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -551,7 +745,51 @@ export default function DashboardPage() {
           {/* Results */}
           {scanResults.length > 0 && !isScanning && (
             <div className="space-y-4 animate-fade-up">
-              <h3 className="text-2xl font-bold">Scan Results</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold">Scan Results</h3>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => exportResults("json")}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    Export JSON
+                  </Button>
+                  <Button
+                    onClick={() => exportResults("csv")}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    Export CSV
+                  </Button>
+                </div>
+              </div>
               <div className="grid gap-4">
                 {scanResults.map((result, index) => (
                   <div
@@ -635,6 +873,13 @@ export default function DashboardPage() {
         .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
         .animate-shake { animation: shake 0.5s ease-in-out; }
       `}</style>
+
+      {/* Tour Guide & Shortcuts Modal */}
+      <TourGuide />
+      <ShortcutsModal
+        isOpen={showShortcuts}
+        onClose={() => setShowShortcuts(false)}
+      />
     </div>
   );
 }

@@ -336,7 +336,7 @@ def predict_and_explain(features_dict):
 # Test with suspicious package
 print("\n📦 Testing: SUSPICIOUS package with base64 & network activity...")
 test_malicious = {
-    'downloads_count': 50, 'age_days': 5, 'maintainers_count': 1,
+    'downloads_count': 50, 'age_days': 5, 'maintainers_count': 3,
     'dependencies_count': 2, 'version_major': 0, 'version_minor': 1,
     'version_patch': 0, 'is_prerelease': 0,
     'base64_imports': 3, 'base64_decode_calls': 10, 'base64_encoded_strings': 15,
