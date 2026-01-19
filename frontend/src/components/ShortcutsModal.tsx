@@ -26,8 +26,8 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
       />
 
       {/* Modal */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[51] w-full max-w-lg animate-fade-up">
-        <Card className="bg-gradient-to-br from-slate-900 to-purple-900 border border-white/20">
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-51 w-full max-w-lg animate-fade-up">
+        <Card className="bg-linear-to-br from-slate-900 to-purple-900 border border-white/20">
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-white flex items-center gap-2">

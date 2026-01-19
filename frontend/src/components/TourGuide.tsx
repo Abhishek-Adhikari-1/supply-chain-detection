@@ -25,18 +25,18 @@ export function TourGuide() {
   return (
     <>
       {/* Overlay */}
-      <div className="fixed inset-0 bg-black/50 z-[9998] animate-fade-in" />
+      <div className="fixed inset-0 bg-black/50 z-9998 animate-fade-in" />
 
       {/* Tour Card */}
       <div
-        className="fixed z-[9999] max-w-md animate-fade-up"
+        className="fixed z-9999 max-w-md animate-fade-up"
         style={{
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
         }}
       >
-        <div className="bg-gradient-to-br from-slate-900 to-purple-900 border border-white/20 rounded-2xl shadow-2xl p-6">
+        <div className="bg-linear-to-br from-slate-900 to-purple-900 border border-white/20 rounded-2xl shadow-2xl p-6">
           {/* Progress */}
           <div className="flex items-center gap-2 mb-4">
             {steps.map((_, index) => (
