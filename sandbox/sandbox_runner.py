@@ -43,19 +43,27 @@ class SandboxRunner:
         """Start network and file monitoring in background"""
         monitors = {}
         
-        # Start network monitor
+        # Start network monitor with unbuffered output
+        net_log = self.logs_dir / f'{self.execution_id}_network.log'
+        with open(net_log, 'w') as f:
+            f.write(f"Network monitoring started for {self.execution_id}\n")
+        
         net_monitor_proc = subprocess.Popen(
-            ['python', '/sandbox/network_monitor.py', self.execution_id],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            ['python', '-u', '/sandbox/network_monitor.py', self.execution_id],
+            stdout=open(net_log, 'a'),
+            stderr=subprocess.STDOUT
         )
         monitors['network'] = net_monitor_proc
         
-        # Start file monitor
+        # Start file monitor with unbuffered output
+        file_log = self.logs_dir / f'{self.execution_id}_files.log'
+        with open(file_log, 'w') as f:
+            f.write(f"File monitoring started for {self.execution_id}\n")
+        
         file_monitor_proc = subprocess.Popen(
-            ['python', '/sandbox/file_monitor.py', self.execution_id, str(self.package_path)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            ['python', '-u', '/sandbox/file_monitor.py', self.execution_id, str(self.package_path)],
+            stdout=open(file_log, 'a'),
+            stderr=subprocess.STDOUT
         )
         monitors['file'] = file_monitor_proc
         
