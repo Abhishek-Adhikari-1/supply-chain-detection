@@ -490,6 +490,93 @@ export default function DashboardPage() {
             </p>
           </div>
 
+          {/* Quick Actions */}
+          <div
+            className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-up"
+            style={{ animationDelay: "0.05s" }}
+          >
+            <Link to="/history" className="group">
+              <div className="border border-border/50 rounded-2xl p-5 bg-card/50 backdrop-blur-sm hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 flex items-center gap-4">
+                <div className="bg-gradient-to-br from-primary/20 to-primary/10 p-4 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                  <svg
+                    className="w-6 h-6 text-primary"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors duration-300">
+                    Scan History
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    View all your past scans and results
+                  </p>
+                </div>
+                <svg
+                  className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </div>
+            </Link>
+            <Link to="/compare" className="group">
+              <div className="border border-border/50 rounded-2xl p-5 bg-card/50 backdrop-blur-sm hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 flex items-center gap-4">
+                <div className="bg-gradient-to-br from-blue-500/20 to-blue-500/10 p-4 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                  <svg
+                    className="w-6 h-6 text-blue-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground group-hover:text-blue-500 transition-colors duration-300">
+                    Compare Packages
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Compare security of multiple packages
+                  </p>
+                </div>
+                <svg
+                  className="w-5 h-5 text-muted-foreground group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </div>
+            </Link>
+          </div>
+
           {/* Live Project Analysis (WebSocket) */}
           <div
             className="border border-border/50 rounded-2xl p-6 space-y-4 bg-card/50 backdrop-blur-sm animate-fade-up hover:border-primary/30 transition-all duration-500 hover:shadow-lg hover:shadow-primary/5"
