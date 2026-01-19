@@ -2,6 +2,7 @@ import express from "express";
 import {
   analyzeProject,
   analyzeUploadedFile,
+  sandboxTest,
 } from "../controllers/analyzer.controller.js";
 import { protectRoute } from "../middlewares/auth.middleware.js";
 import multer from "multer";
@@ -19,5 +20,6 @@ router.post(
   upload.single("file"),
   analyzeUploadedFile,
 );
+router.post("/sandbox", protectRoute, sandboxTest);
 
 export default router;

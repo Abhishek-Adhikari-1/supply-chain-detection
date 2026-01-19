@@ -9,6 +9,7 @@ import ThreatDetailPage from "@/pages/ThreatDetailPage";
 import LandingPage from "@/pages/LandingPage";
 import HistoryPage from "@/pages/HistoryPage";
 import ComparePage from "@/pages/ComparePage";
+import SandboxPage from "@/pages/SandboxPage";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -68,6 +69,14 @@ function AppContent() {
         element={
           <ProtectedRoute>
             <ComparePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/sandbox"
+        element={
+          <ProtectedRoute>
+            <SandboxPage />
           </ProtectedRoute>
         }
       />
