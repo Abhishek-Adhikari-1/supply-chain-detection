@@ -4,7 +4,7 @@ import pickle
 import hashlib
 import os
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 
 import numpy as np
 import pandas as pd
@@ -652,7 +652,7 @@ def scan_project_source_for_risks(project_dir: Path) -> Dict[str, float]:
 # ---------------- prediction ----------------
 def load_model():
     # Check if model exists, if not provide a helpful error
-    if not Path(MODEL_PATH).exists():
+    if MODEL_PATH is None or not MODEL_PATH.exists():
         error_msg = f"Model file not found at: {MODEL_PATH}\n"
         error_msg += "Searched locations:\n"
         for path in MODEL_PATHS:

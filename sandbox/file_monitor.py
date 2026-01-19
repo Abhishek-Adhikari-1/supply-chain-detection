@@ -98,6 +98,21 @@ class FileMonitor:
         """Check if file path is suspicious"""
         path_str = str(path).lower()
         
+        # Whitelist safe paths/patterns
+        safe_patterns = [
+            '/.npm/_logs/',
+            '/.npm/_update-notifier',
+            '/node_modules/',
+            '/.cache/',
+            '/package.json',
+            '/package-lock.json',
+            '__pycache__',
+        ]
+        
+        for safe in safe_patterns:
+            if safe in path_str:
+                return False
+        
         # Check sensitive directories
         for sensitive in self.sensitive_paths:
             if sensitive in path_str:
@@ -112,6 +127,11 @@ class FileMonitor:
     
     def analyze_file_operations(self):
         """Analyze collected file operations for threats"""
+        # Limit events to avoid massive JSON
+        if len(self.events) > 1000:
+            print(f"[FileMonitor] Warning: Too many events ({len(self.events)}). Truncating.")
+            self.events = self.events[:1000]
+
         analysis = {
             'total_events': len(self.events),
             'suspicious_events': [],
@@ -175,34 +195,43 @@ class FileMonitor:
         """Stop monitoring and save results"""
         print(f"[FileMonitor] Stopping...")
         
-        if self.observer:
-            self.observer.stop()
-            self.observer.join(timeout=5)
+        try:
+            if self.observer:
+                self.observer.stop()
+                self.observer.join(timeout=2)  # Reduced timeout
+        except Exception as e:
+            print(f"[FileMonitor] Error stopping observer: {e}")
         
-        duration = time.time() - self.start_time if self.start_time else 0
-        
-        # Analyze operations
-        analysis = self.analyze_file_operations()
-        
-        # Compile results
-        result = {
-            'execution_id': self.execution_id,
-            'watch_path': str(self.watch_path),
-            'duration': duration,
-            'events': self.events,
-            'analysis': analysis
-        }
-        
-        # Save to file
-        log_file = self.logs_dir / f'{self.execution_id}_files.json'
-        with open(log_file, 'w') as f:
-            json.dump(result, f, indent=2)
-        
-        print(f"[FileMonitor] Results saved: {log_file}")
-        print(f"[FileMonitor] Total events: {len(self.events)}")
-        print(f"[FileMonitor] Suspicious: {len(analysis['suspicious_events'])}")
-        
-        return result
+        try:
+            duration = time.time() - self.start_time if self.start_time else 0
+            
+            # Analyze operations
+            analysis = self.analyze_file_operations()
+            
+            # Compile results
+            result = {
+                'execution_id': self.execution_id,
+                'watch_path': str(self.watch_path),
+                'duration': duration,
+                'events': self.events,
+                'analysis': analysis
+            }
+            
+            # Save to file
+            log_file = self.logs_dir / f'{self.execution_id}_files.json'
+            with open(log_file, 'w') as f:
+                json.dump(result, f, indent=2)
+            
+            print(f"[FileMonitor] Results saved: {log_file}")
+            print(f"[FileMonitor] Total events: {len(self.events)}")
+            print(f"[FileMonitor] Suspicious: {len(analysis['suspicious_events'])}")
+            
+            return result
+        except Exception as e:
+            print(f"[FileMonitor] Error saving results: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
 
 
 def main():

